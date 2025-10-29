@@ -34,7 +34,8 @@ echo ">>> Starting Emacs and auto-package fetching/installing ..."
 ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-install)"
 #+end_src
 
-* Variables
+* Custom Variables
+
 #+begin_src emacs-lisp
 (defcustom ll/use-nerd-fonts t
   "Configuration for using Nerd Fonts Symbols."
@@ -96,6 +97,52 @@ ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-instal
 (setq visible-bell nil)
 #+end_src
 
+* Projectile
+#+begin_src emacs-lisp
+(use-package projectile
+  :ensure t
+  :demand t
+  :init
+  (setq projectile-completion-system 'default
+        projectile-project-search-path '("~/code/"))
+  :config
+  (projectile-mode 1)
+  ;; optional: enable caching for faster switching
+  (setq projectile-enable-caching t))
+#+end_src
+
+* Persistence and Workspaces
+#+begin_src emacs-lisp
+(use-package perspective
+    :ensure (perspective :host github :repo "nex3/perspective-el")
+    :demand t
+    :init
+    (setq persp-mode-prefix-key (kbd ","))
+    :config
+    (persp-mode)
+    (with-eval-after-load 'evil
+        (define-prefix-command 'll/workspace-map)
+        (define-key evil-normal-state-map (kbd ",") 'll/workspace-map)
+
+        ;; Workspace commands under ","
+        (define-key ll/workspace-map (kbd ",") #'persp-switch)              ; switch to workspace
+        (define-key ll/workspace-map (kbd "n") #'persp-next)                ; next workspace
+        (define-key ll/workspace-map (kbd "p") #'persp-prev)                ; previous workspace
+        (define-key ll/workspace-map (kbd "r") #'persp-rename)              ; rename workspace
+        (define-key ll/workspace-map (kbd "k") #'persp-kill)                ; kill workspace
+        (define-key ll/workspace-map (kbd "b") #'persp-switch-to-buffer*)   ; switch buffer
+        (define-key ll/workspace-map (kbd "a") #'persp-add-buffer)          ; add buffer
+        (define-key ll/workspace-map (kbd "A") #'persp-set-buffer)))        ; set buffer exclusively
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package persp-projectile
+    :after (evil perspective projectile)
+    :ensure (persp-projectile :host github :repo "bbatsov/persp-projectile")
+    :config
+    (evil-define-key 'normal 'global (kbd "<leader> p p") 'projectile-persp-switch-project))
+#+end_src
+
 * Embark
 Embark provides a powerful contextual action menu for Emacs, allowing
 you to perform various operations on completion candidates and other items.
@@ -121,26 +168,46 @@ that Consult commands, like previews, are available when using Embark.
 
 * Package management
 #+begin_src emacs-lisp
-;; Example packages managed by Elpaca
-(use-package transient
-  :ensure t)
+  ;; Example packages managed by Elpaca
+  (use-package transient
+    :ensure t)
 
-(use-package magit
-  :ensure t
-  :defer t)
+  (use-package magit
+    :ensure t
+    :defer t)
 
-(use-package vertico
-  :ensure t
-  :init (vertico-mode))
+  (use-package vertico
+    :ensure t
+    :init (vertico-mode))
 
-(use-package orderless
-  :ensure t
-  :after vertico
-  :custom (completion-styles '(orderless basic)))
 
-(use-package marginalia
-  :ensure t
-  :init (marginalia-mode))
+  (use-package orderless
+    :ensure t
+    :after vertico
+    :custom (completion-styles '(orderless basic)))
+
+  (use-package marginalia
+    :ensure t
+    :init (marginalia-mode))
+#+end_src
+
+* Exploring Filesystem
+
+** Vertico
+This package is a Vertico extension, which provides Ido-like
+directory navigation commands.  The commands can be bound in the
+~vertico-map~.
+#+begin_src emacs-lisp
+(use-package vertico-directory
+    :after vertico
+    :ensure nil
+    ;; More convenient directory navigation commands
+    :bind (:map vertico-map
+                ("RET" . vertico-directory-enter)
+                ("DEL" . vertico-directory-delete-char)
+                ("M-DEL" . vertico-directory-delete-word))
+    ;; Tidy shadowed file names
+    :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 #+end_src
 
 * Consult
@@ -207,20 +274,20 @@ programming languages.
 
 ** Modeline
 #+begin_src emacs-lisp
-(use-package doom-modeline
-    :ensure t
-    :defer t
-    :custom
-    (doom-modeline-buffer-file-name-style 'buffer-name)  ;; Set the buffer file name style to just the buffer name (without path).
-    (doom-modeline-project-detection 'project)           ;; Enable project detection for displaying the project name.
-    (doom-modeline-buffer-name t)                        ;; Show the buffer name in the mode line.
-    (doom-modeline-vcs-max-length 25)                    ;; Limit the version control system (VCS) branch name length to 25 characters.
-    :config
-    (if ll/use-nerd-fonts                                ;; Check if nerd fonts are being used.
-        (setq doom-modeline-icon t)                      ;; Enable icons in the mode line if nerd fonts are used.
-    (setq doom-modeline-icon nil))                     ;; Disable icons if nerd fonts are not being used.
-    :hook
-    (after-init . doom-modeline-mode))
+  (use-package doom-modeline
+      :ensure t
+      :defer t
+      :custom
+      (doom-modeline-buffer-file-name-style 'buffer-name)  ;; Set the buffer file name style to just the buffer name (without path).
+      (doom-modeline-project-detection 'project)           ;; Enable project detection for displaying the project name.
+      (doom-modeline-buffer-name t)                        ;; Show the buffer name in the mode line.
+      (doom-modeline-vcs-max-length 25)                    ;; Limit the version control system (VCS) branch name length to 25 characters.
+      :config
+      (if ll/use-nerd-fonts                                ;; Check if nerd fonts are being used.
+          (setq doom-modeline-icon t)                      ;; Enable icons in the mode line if nerd fonts are used.
+          (setq doom-modeline-icon nil))                     ;; Disable icons if nerd fonts are not being used.
+      :init
+      (doom-modeline-mode 1))
 #+end_src
 
 ** Nerd Icons
@@ -340,21 +407,11 @@ changes in your buffers.
     (evil-define-key 'normal 'global (kbd "] d") 'flymake-goto-next-error) ;; Go to next Flymake error
     (evil-define-key 'normal 'global (kbd "[ d") 'flymake-goto-prev-error) ;; Go to previous Flymake error
 
-    ;; Dired commands for file management
-    (evil-define-key 'normal 'global (kbd "<leader> x d") 'dired)
-    (evil-define-key 'normal 'global (kbd "<leader> x j") 'dired-jump)
-    (evil-define-key 'normal 'global (kbd "<leader> x f") 'find-file)
-
     (evil-define-key 'normal 'global (kbd "<leader> f s") 'save-buffer)
-    (evil-define-key 'normal 'global (kbd "<leader> f f") 'dired-jump)
 
-    ;; Diff-HL navigation for version control
-    (evil-define-key 'normal 'global (kbd "] c") 'diff-hl-next-hunk) ;; Next diff hunk
-    (evil-define-key 'normal 'global (kbd "[ c") 'diff-hl-previous-hunk) ;; Previous diff hunk
-
-    ;; NeoTree command for file exploration
-    (evil-define-key 'normal 'global (kbd "<leader> e e") 'neotree-toggle)
-    (evil-define-key 'normal 'global (kbd "<leader> e d") 'dired-jump)
+    ;; Dired commands for file management
+    (evil-define-key 'normal 'global (kbd "<leader> f f") 'find-file)
+    (evil-define-key 'normal 'global (kbd "<leader> f d") 'dired-jump)
 
     ;; Magit keybindings for Git integration
     (evil-define-key 'normal 'global (kbd "<leader> g g") 'magit-status)      ;; Open Magit status
@@ -364,12 +421,9 @@ changes in your buffers.
     (evil-define-key 'normal 'global (kbd "<leader> g b") 'vc-annotate)       ;; Annotate buffer with version control info
 
     ;; Buffer management keybindings
-    (evil-define-key 'normal 'global (kbd "] b") 'switch-to-next-buffer) ;; Switch to next buffer
-    (evil-define-key 'normal 'global (kbd "[ b") 'switch-to-prev-buffer) ;; Switch to previous buffer
-    (evil-define-key 'normal 'global (kbd "<leader> b b") 'ibuffer) ;; Open Ibuffer
-    (evil-define-key 'normal 'global (kbd "<leader> b d") 'kill-current-buffer) ;; Kill current buffer
-    (evil-define-key 'normal 'global (kbd "<leader> b k") 'kill-current-buffer) ;; Kill current buffer
-    (evil-define-key 'normal 'global (kbd "<leader> b x") 'kill-current-buffer) ;; Kill current buffer
+    (evil-define-key 'normal 'global (kbd "<leader> k") 'switch-to-next-buffer) ;; Switch to next buffer
+    (evil-define-key 'normal 'global (kbd "<leader> j") 'switch-to-prev-buffer) ;; Switch to previous buffer
+    (evil-define-key 'normal 'global (kbd "<leader> x") 'kill-current-buffer) ;; Kill current buffer
     (evil-define-key 'normal 'global (kbd "<leader> <") 'consult-buffer) ;; Consult buffer
 
     ;; Project management keybindings
@@ -394,19 +448,14 @@ changes in your buffers.
     (evil-define-key 'normal 'global (kbd "<leader> h m") 'describe-mode) ;; Describe current mode
     (evil-define-key 'normal 'global (kbd "<leader> h f") 'describe-function) ;; Describe function
     (evil-define-key 'normal 'global (kbd "<leader> h v") 'describe-variable) ;; Describe variable
-    (evil-define-key 'normal 'global (kbd "<leader> h k") 'describe-key) ;; Describe key
+    (evil-define-key 'normal 'global (kbd "<leader> h k") 'describe-key)
+
+    ;; Window keybindings
+    (evil-define-key 'normal 'global (kbd "<leader> w d") 'delete-window) 
 
     ;; Tab navigation
     (evil-define-key 'normal 'global (kbd "] t") 'tab-next) ;; Go to next tab
     (evil-define-key 'normal 'global (kbd "[ t") 'tab-previous) ;; Go to previous tab
-
-
-    ;; Custom example. Formatting with prettier tool.
-    (evil-define-key 'normal 'global (kbd "<leader> m p")
-                     (lambda ()
-                       (interactive)
-                       (shell-command (concat "prettier --write " (shell-quote-argument (buffer-file-name))))
-                       (revert-buffer t t t)))
 
     ;; LSP commands keybindings
     (evil-define-key 'normal lsp-mode-map
@@ -468,7 +517,37 @@ commands to fit the `evil' style.
   (setq evil-collection-setup-minibuffer t))
 #+end_src
 
-* Final touches
+* LSP
 #+begin_src emacs-lisp
-(message "✅ Emacs is ready!")
+(use-package lsp-mode
+    :ensure (lsp-mode :host github :repo "emacs-lsp/lsp-mode")
+    :commands lsp)
+
+(use-package lsp-ui
+    :ensure (lsp-ui :host github :repo "emacs-lsp/lsp-ui")
+    :commands lsp-ui-mode)
+#+end_src
+
+* Python
+#+begin_src emacs-lisp
+(use-package lsp-pyright
+    :ensure (lsp-pyright :host github :repo "emacs-lsp/lsp-pyright")
+  :custom (lsp-pyright-langserver-command "basedpyright")
+  :hook (python-ts-mode . (lambda ()
+                          (require 'lsp-pyright)
+                          (lsp))))  ; or lsp-deferred
+#+end_src
+
+* Direnv
+Direnv works by invoking direnv to obtain the environment for the current file, then updating the emacs
+variables process-environment and exec-path.
+
+The result is that programs started from within emacs, such as inferior shells, linters,
+compilers, and test runners, will be looked up in the correct $PATH, and will be started with the correct environment variables set.
+
+#+begin_src emacs-lisp
+(use-package direnv
+    :ensure (direnv :host github :repo "wbolster/emacs-direnv")
+    :config
+    (direnv-mode))
 #+end_src
