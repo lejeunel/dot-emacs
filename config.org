@@ -233,7 +233,11 @@ Use ~h~ to go up directory and ~l~ to open file (like netrw).
     (kbd "l") 'dired-find-file
     (kbd "r") 'revert-buffer))  ;; refresh buffer
 #+end_src
-
+* Magit
+Make Magit commit buffer start in insert mode
+#+begin_src emacs-lisp
+(add-hook 'git-commit-mode-hook #'evil-insert-state)
+#+end_src
 * Consult
 Consult provides powerful completion and narrowing commands for Emacs.
 It integrates well with other completion frameworks like Vertico, enabling
