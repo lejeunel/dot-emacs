@@ -45,6 +45,12 @@ ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-instal
 
 * Elpaca
 #+begin_src emacs-lisp
+(setq elpaca-lock-file (expand-file-name "elpaca/" user-emacs-directory))
+#+end_src
+
+Install Elpaca, our package manager.
+
+#+begin_src emacs-lisp
 (defvar elpaca-installer-version 0.11)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
@@ -113,26 +119,25 @@ ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-instal
 
 * Persistence and Workspaces
 #+begin_src emacs-lisp
-(use-package perspective
+  (use-package perspective
     :ensure (perspective :host github :repo "nex3/perspective-el")
     :demand t
-    :init
-    (setq persp-mode-prefix-key (kbd ","))
     :config
+    (setq persp-suppress-no-prefix-key-warning t)
     (persp-mode)
     (with-eval-after-load 'evil
-        (define-prefix-command 'll/workspace-map)
-        (define-key evil-normal-state-map (kbd ",") 'll/workspace-map)
+      (define-prefix-command 'll/workspace-map)
+      (define-key evil-normal-state-map (kbd ",") 'll/workspace-map)
 
-        ;; Workspace commands under ","
-        (define-key ll/workspace-map (kbd ",") #'persp-switch)              ; switch to workspace
-        (define-key ll/workspace-map (kbd "n") #'persp-next)                ; next workspace
-        (define-key ll/workspace-map (kbd "p") #'persp-prev)                ; previous workspace
-        (define-key ll/workspace-map (kbd "r") #'persp-rename)              ; rename workspace
-        (define-key ll/workspace-map (kbd "k") #'persp-kill)                ; kill workspace
-        (define-key ll/workspace-map (kbd "b") #'persp-switch-to-buffer*)   ; switch buffer
-        (define-key ll/workspace-map (kbd "a") #'persp-add-buffer)          ; add buffer
-        (define-key ll/workspace-map (kbd "A") #'persp-set-buffer)))        ; set buffer exclusively
+      ;; Workspace commands under ","
+      (define-key ll/workspace-map (kbd ",") #'projectile-persp-switch-project)              ; switch to workspace
+      (define-key ll/workspace-map (kbd "n") #'persp-next)                ; next workspace
+      (define-key ll/workspace-map (kbd "p") #'persp-prev)                ; previous workspace
+      (define-key ll/workspace-map (kbd "r") #'persp-rename)              ; rename workspace
+      (define-key ll/workspace-map (kbd "k") #'persp-kill)                ; kill workspace
+      (define-key ll/workspace-map (kbd "b") #'persp-switch-to-buffer*)   ; switch buffer
+      (define-key ll/workspace-map (kbd "a") #'persp-add-buffer)          ; add buffer
+      (define-key ll/workspace-map (kbd "A") #'persp-set-buffer)))        ; set buffer exclusively
 #+end_src
 
 #+begin_src emacs-lisp
@@ -193,7 +198,7 @@ that Consult commands, like previews, are available when using Embark.
 
 * Exploring Filesystem
 
-** Vertico
+** Vertico extension
 This package is a Vertico extension, which provides Ido-like
 directory navigation commands.  The commands can be bound in the
 ~vertico-map~.

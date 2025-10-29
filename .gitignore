@@ -1,0 +1,14 @@
+/.local/
+/.lsp-session-v1
+/auto-save-list/
+/config.el
+/config.org~
+/eln-cache/
+/elpa/
+/elpaca/
+/projectile-bookmarks.eld
+/projects
+/recentf
+/transient/
+/tree-sitter/
+/init.el~
