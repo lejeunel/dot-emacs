@@ -96,25 +96,20 @@ Install Elpaca, our package manager.
 
 * Basic UI tweaks
 #+begin_src emacs-lisp
-(setq inhibit-startup-message t)
-(menu-bar-mode -1)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(setq visible-bell nil)
+  (setq inhibit-startup-message t)
+  (menu-bar-mode -1)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+  (setq visible-bell nil)
 #+end_src
 
-* Projectile
+* Project Management
 #+begin_src emacs-lisp
-(use-package projectile
-  :ensure t
-  :demand t
-  :init
-  (setq projectile-completion-system 'default
-        projectile-project-search-path '("~/code/"))
-  :config
-  (projectile-mode 1)
-  ;; optional: enable caching for faster switching
-  (setq projectile-enable-caching t))
+  (use-package consult-project-extra
+    :ensure t
+    :config
+    (with-eval-after-load 'evil
+      (define-key evil-normal-state-map (kbd "<leader> p p") 'consult-project-extra-find)))
 #+end_src
 
 * Persistence and Workspaces
@@ -129,25 +124,42 @@ Install Elpaca, our package manager.
       (define-prefix-command 'll/workspace-map)
       (define-key evil-normal-state-map (kbd ",") 'll/workspace-map)
 
-      ;; Workspace commands under ","
-      (define-key ll/workspace-map (kbd ",") #'projectile-persp-switch-project)              ; switch to workspace
-      (define-key ll/workspace-map (kbd "n") #'persp-next)                ; next workspace
-      (define-key ll/workspace-map (kbd "p") #'persp-prev)                ; previous workspace
-      (define-key ll/workspace-map (kbd "r") #'persp-rename)              ; rename workspace
-      (define-key ll/workspace-map (kbd "k") #'persp-kill)                ; kill workspace
-      (define-key ll/workspace-map (kbd "b") #'persp-switch-to-buffer*)   ; switch buffer
-      (define-key ll/workspace-map (kbd "a") #'persp-add-buffer)          ; add buffer
-      (define-key ll/workspace-map (kbd "A") #'persp-set-buffer)))        ; set buffer exclusively
+      (define-key ll/workspace-map (kbd ",") #'project-switch-project) 
+      (define-key ll/workspace-map (kbd "n") #'persp-next)
+      (define-key ll/workspace-map (kbd "p") #'persp-prev)
+      (define-key ll/workspace-map (kbd "r") #'persp-rename)
+      (define-key ll/workspace-map (kbd "k") #'persp-kill)
+      (define-key ll/workspace-map (kbd "b") #'persp-switch-to-buffer*)
+      (define-key ll/workspace-map (kbd "a") #'persp-add-buffer)
+      (define-key ll/workspace-map (kbd "A") #'persp-set-buffer)))
 #+end_src
+
+* Harpoon
+This package offers quick bookmarks separated by project and branch.
+You can quick navigate between your working files and forget about that files
+opened that you will not use anymore.
 
 #+begin_src emacs-lisp
-(use-package persp-projectile
-    :after (evil perspective projectile)
-    :ensure (persp-projectile :host github :repo "bbatsov/persp-projectile")
-    :config
-    (evil-define-key 'normal 'global (kbd "<leader> p p") 'projectile-persp-switch-project))
+  (use-package harpoon
+    :ensure (harpoon :host github :repo "otavioschwanck/harpoon.el")
+    :config 
+    (setq harpoon-project-package 'project)
+    (with-eval-after-load 'evil
+      (define-key evil-normal-state-map (kbd "<leader> r m") 'harpoon-quick-menu-hydra)
+      (define-key evil-normal-state-map (kbd "<leader> r a") 'harpoon-add-file)
+      (define-key evil-normal-state-map (kbd "<leader> r r") 'harpoon-toggle-file)
+      (define-key evil-normal-state-map (kbd "<leader> r t") 'harpoon-toggle-quick-menu)
+      (define-key evil-normal-state-map (kbd "<leader> r c") 'harpoon-clear)
+      (define-key evil-normal-state-map (kbd "<leader> 1") 'harpoon-go-to-1)
+      (define-key evil-normal-state-map (kbd "<leader> 2") 'harpoon-go-to-2)
+      (define-key evil-normal-state-map (kbd "<leader> 3") 'harpoon-go-to-3)
+      (define-key evil-normal-state-map (kbd "<leader> 4") 'harpoon-go-to-4)
+      (define-key evil-normal-state-map (kbd "<leader> 5") 'harpoon-go-to-5)
+      (define-key evil-normal-state-map (kbd "<leader> 6") 'harpoon-go-to-6)
+      (define-key evil-normal-state-map (kbd "<leader> 7") 'harpoon-go-to-7)
+      (define-key evil-normal-state-map (kbd "<leader> 8") 'harpoon-go-to-8)
+      (define-key evil-normal-state-map (kbd "<leader> 9") 'harpoon-go-to-9)))
 #+end_src
-
 * Recentf
 Log and retrieve most recent files
 #+begin_src emacs-lisp
@@ -233,11 +245,13 @@ Use ~h~ to go up directory and ~l~ to open file (like netrw).
     (kbd "l") 'dired-find-file
     (kbd "r") 'revert-buffer))  ;; refresh buffer
 #+end_src
+
 * Magit
 Make Magit commit buffer start in insert mode
 #+begin_src emacs-lisp
 (add-hook 'git-commit-mode-hook #'evil-insert-state)
 #+end_src
+
 * Consult
 Consult provides powerful completion and narrowing commands for Emacs.
 It integrates well with other completion frameworks like Vertico, enabling
@@ -256,6 +270,15 @@ navigating buffers, files, and xrefs with ease.
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref))
 
+#+end_src
+
+#+begin_src emacs-lisp
+(defun ll/consult-project-or-all-buffers ()
+  "Use `consult-project-buffer' if in a project, else `consult-buffer'."
+  (interactive)
+  (if (project-current)
+      (consult-project-buffer)
+    (consult-buffer)))
 #+end_src
 
 * Treesitter
@@ -359,6 +382,18 @@ making it easier to distinguish between different types of items.
 (nerd-icons-completion-mode)            ;; Activate nerd icons for completion interfaces.
 (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)) ;; Setup icons in the marginalia mode for enhanced completion display.
 #+end_src
+* Auto-completion
+#+begin_src emacs-lisp
+  (use-package company
+    :ensure t
+    :hook ((after-init . global-company-mode)
+  	 (lsp-mode . company-mode))
+    :config
+    ;; optional tweaks
+    (setq company-idle-delay 0.2        ;; how quickly completions pop up
+          company-minimum-prefix-length 1
+          company-selection-wrap-around t))
+#+end_src
 
 * Editing enhancements
 
@@ -403,6 +438,7 @@ changes in your buffers.
 #+end_src
 
 * Evil
+
 #+begin_src emacs-lisp
   (use-package evil
     :ensure t
@@ -450,14 +486,13 @@ changes in your buffers.
     (evil-define-key 'normal 'global (kbd "<leader> g b") 'vc-annotate)       ;; Annotate buffer with version control info
 
     ;; Buffer management keybindings
-    (evil-define-key 'normal 'global (kbd "<leader> k") 'switch-to-next-buffer) ;; Switch to next buffer
-    (evil-define-key 'normal 'global (kbd "<leader> j") 'switch-to-prev-buffer) ;; Switch to previous buffer
-    (evil-define-key 'normal 'global (kbd "<leader> x") 'kill-current-buffer) ;; Kill current buffer
-    (evil-define-key 'normal 'global (kbd "<leader> <") 'consult-buffer) ;; Consult buffer
+    (evil-define-key 'normal 'global (kbd "<leader> k") 'switch-to-next-buffer)
+    (evil-define-key 'normal 'global (kbd "<leader> j") 'switch-to-prev-buffer)
+    (evil-define-key 'normal 'global (kbd "<leader> x") 'kill-current-buffer) 
+    (evil-define-key 'normal 'global (kbd "<leader> <") 'll/consult-project-or-all-buffers)
 
     ;; Project management keybindings
     (evil-define-key 'normal 'global (kbd "<leader> p b") 'consult-project-buffer) ;; Consult project buffer
-    (evil-define-key 'normal 'global (kbd "<leader> p p") 'project-switch-project) ;; Switch project
     (evil-define-key 'normal 'global (kbd "<leader> p f") 'project-find-file) ;; Find file in project
     (evil-define-key 'normal 'global (kbd "<leader> p g") 'project-find-regexp) ;; Find regexp in project
     (evil-define-key 'normal 'global (kbd "<leader> p k") 'project-kill-buffers) ;; Kill project buffers
@@ -481,6 +516,7 @@ changes in your buffers.
 
     ;; Window keybindings
     (evil-define-key 'normal 'global (kbd "<leader> w d") 'delete-window) 
+    (evil-define-key 'normal 'global (kbd "<leader> TAB") 'other-window) 
 
     ;; Tab navigation
     (evil-define-key 'normal 'global (kbd "] t") 'tab-next) ;; Go to next tab
@@ -529,7 +565,17 @@ changes in your buffers.
     (evil-mode 1))
 #+end_src
 
-* Evil collection
+** Evil Snipe
+
+#+begin_src emacs-lisp
+  (use-package evil-snipe
+    :ensure (evil-snipe :host github :repo "hlissner/evil-snipe")
+    :init
+    (evil-snipe-mode +1)
+    (evil-snipe-override-mode 1))
+#+end_src
+
+** Evil collection
 The `evil-collection' package enhances the integration of
 `evil-mode' with various built-in and third-party packages. It
 provides a better modal experience by remapping keybindings and
@@ -546,24 +592,71 @@ commands to fit the `evil' style.
   (setq evil-collection-setup-minibuffer t))
 #+end_src
 
+** Search from visual selection
+
+#+begin_src emacs-lisp
+  (use-package evil-visualstar
+    :ensure (evil-visualstar :host github :repo "bling/evil-visualstar")
+    :init (global-evil-visualstar-mode))
+
+  (defun ll/evil-ex-search-show-count-advice (&rest _)
+    "Show current match count in the modeline for visual star search."
+    (when (evil-visual-state-p)
+      ;; force update of search count
+      (evil-ex-search-update)))
+
+  (advice-add 'evil-visualstar/begin-search-forward :after #'ll/evil-ex-search-show-count-advice)
+  (advice-add 'evil-visualstar/begin-search-backward :after #'ll/evil-ex-search-show-count-advice)
+#+end_src
+
 * LSP
 #+begin_src emacs-lisp
   (use-package lsp-mode
-      :ensure (lsp-mode :host github :repo "emacs-lsp/lsp-mode")
+    :ensure (lsp-mode :host github :repo "emacs-lsp/lsp-mode")
     :hook (python-ts-mode . lsp-deferred)
-      :commands (lsp lsp-deferred))
+    :commands (lsp lsp-deferred)
+    :config
+    (setq lsp-prefer-capf t)  ;; Use completion-at-point-functions (CAPF) as backend 
+    )
 
   (use-package lsp-ui
-      :ensure (lsp-ui :host github :repo "emacs-lsp/lsp-ui")
-      :commands lsp-ui-mode)
+    :ensure (lsp-ui :host github :repo "emacs-lsp/lsp-ui")
+    :commands lsp-ui-mode)
 #+end_src
 
 * Python
+
+** LSP
 #+begin_src emacs-lisp
-(use-package lsp-pyright
-    :ensure (lsp-pyright :host github :repo "emacs-lsp/lsp-pyright")
-  :custom (lsp-pyright-langserver-command "basedpyright")
-  )
+  (use-package lsp-pyright
+      :ensure (lsp-pyright :host github :repo "emacs-lsp/lsp-pyright")
+    :custom (lsp-pyright-langserver-command "basedpyright")
+    )
+#+end_src
+** Breakpoints
+
+Bindings and functions to add and highlight breakpoints.
+#+begin_src emacs-lisp :tangle yes
+(defvar python--pdb-breakpoint-string "breakpoint()")
+(defun ll/python-add-breakpoint ()
+"Inserts a python breakpoint using `pdb'"
+    (interactive)
+    (back-to-indentation)
+    ;; this preserves the correct indentation in case the line above
+    ;; point is a nested block
+    (split-line)
+    (insert python--pdb-breakpoint-string)
+    (python-set-debug-highlight))
+
+(defun python-set-debug-highlight ()
+    (interactive)
+    (highlight-lines-matching-regexp "breakpoint[.]?" 'hi-red-b))
+#+end_src
+
+#+begin_src emacs-lisp
+(add-hook 'python-ts-mode-hook
+          (lambda ()
+            (define-key python-ts-mode-map (kbd "<leader> m d") 'll/python-add-breakpoint)))
 #+end_src
 
 * Direnv
@@ -574,8 +667,15 @@ The result is that programs started from within emacs, such as inferior shells, 
 compilers, and test runners, will be looked up in the correct $PATH, and will be started with the correct environment variables set.
 
 #+begin_src emacs-lisp
-(use-package direnv
-    :ensure (direnv :host github :repo "wbolster/emacs-direnv")
+  (use-package direnv
+      :ensure (direnv :host github :repo "wbolster/emacs-direnv")
+      :config
+      (direnv-mode))
+#+end_src
+* Org-mode
+#+begin_src emacs-lisp
+  (use-package org
+    :ensure nil  ;; Don't install org from ELPA, use the built-in one
     :config
-    (direnv-mode))
+    (define-key org-mode-map (kbd "<leader> m e") #'org-export-dispatch))
 #+end_src
