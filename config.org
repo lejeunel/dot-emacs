@@ -37,10 +37,17 @@ ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-instal
 * Custom Variables
 
 #+begin_src emacs-lisp
-(defcustom ll/use-nerd-fonts t
-  "Configuration for using Nerd Fonts Symbols."
-  :type 'boolean
-  :group 'appearance)
+  (defcustom ll/use-nerd-fonts t
+    "Configuration for using Nerd Fonts Symbols."
+    :type 'boolean
+    :group 'appearance)
+#+end_src
+
+* General User Experience
+
+Change the yes/no prompt to y/n
+#+begin_src emacs-lisp
+(fset 'yes-or-no-p 'y-or-n-p)
 #+end_src
 
 * Elpaca
@@ -320,7 +327,6 @@ programming languages.
       :ensure t
       :init
       (load-theme 'modus-vivendi-tinted t))
-
 #+end_src
 
 ** Modeline
@@ -518,19 +524,23 @@ changes in your buffers.
     (evil-define-key 'normal 'global (kbd "<leader> w d") 'delete-window) 
     (evil-define-key 'normal 'global (kbd "<leader> TAB") 'other-window) 
 
+    (define-key evil-normal-state-map (kbd "C-l") 'evil-window-right)
+    (define-key evil-normal-state-map (kbd "C-h") 'evil-window-left)
+    (define-key evil-insert-state-map (kbd "C-l") 'evil-window-right)
+    (define-key evil-insert-state-map (kbd "C-h") 'evil-window-left)
+
     ;; Tab navigation
     (evil-define-key 'normal 'global (kbd "] t") 'tab-next) ;; Go to next tab
     (evil-define-key 'normal 'global (kbd "[ t") 'tab-previous) ;; Go to previous tab
 
     ;; LSP commands keybindings
     (evil-define-key 'normal lsp-mode-map
-                     ;; (kbd "gd") 'lsp-find-definition                ;; evil-collection already provides gd
-                     (kbd "gr") 'lsp-find-references                   ;; Finds LSP references
-                     (kbd "<leader> c a") 'lsp-execute-code-action     ;; Execute code actions
-                     (kbd "<leader> r n") 'lsp-rename                  ;; Rename symbol
-                     (kbd "gI") 'lsp-find-implementation               ;; Find implementation
-                     (kbd "<leader> l f") 'lsp-format-buffer)          ;; Format buffer via lsp
-
+      ;; (kbd "gd") 'lsp-find-definition                ;; evil-collection already provides gd
+      (kbd "gr") 'lsp-find-references                   ;; Finds LSP references
+      (kbd "<leader> c a") 'lsp-execute-code-action     ;; Execute code actions
+      (kbd "<leader> r n") 'lsp-rename                  ;; Rename symbol
+      (kbd "gI") 'lsp-find-implementation               ;; Find implementation
+      (kbd "<leader> l f") 'lsp-format-buffer)          ;; Format buffer via lsp
 
     (defun ek/lsp-describe-and-jump ()
       "Show hover documentation and jump to *lsp-help* buffer."
@@ -546,20 +556,20 @@ changes in your buffers.
     (evil-define-key 'normal 'global (kbd "K")
       (if (>= emacs-major-version 31)
           #'eldoc-box-help-at-point
-          #'ek/lsp-describe-and-jump))
+        #'ek/lsp-describe-and-jump))
 
     ;; Commenting functionality for single and multiple lines
     (evil-define-key 'normal 'global (kbd "gcc")
-                     (lambda ()
-                       (interactive)
-                       (if (not (use-region-p))
-                           (comment-or-uncomment-region (line-beginning-position) (line-end-position)))))
+      (lambda ()
+        (interactive)
+        (if (not (use-region-p))
+            (comment-or-uncomment-region (line-beginning-position) (line-end-position)))))
 
     (evil-define-key 'visual 'global (kbd "gc")
-                     (lambda ()
-                       (interactive)
-                       (if (use-region-p)
-                           (comment-or-uncomment-region (region-beginning) (region-end)))))
+      (lambda ()
+        (interactive)
+        (if (use-region-p)
+            (comment-or-uncomment-region (region-beginning) (region-end)))))
 
 
     (evil-mode 1))
@@ -672,10 +682,51 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
       :config
       (direnv-mode))
 #+end_src
+
 * Org-mode
 #+begin_src emacs-lisp
   (use-package org
     :ensure nil  ;; Don't install org from ELPA, use the built-in one
     :config
     (define-key org-mode-map (kbd "<leader> m e") #'org-export-dispatch))
+#+end_src
+
+* Window Management
+
+#+begin_src emacs-lisp :tangle yes
+  (winner-mode)
+  (defun toggle-maximize-window ()
+   "Maximize the window or bring back the previous layout."
+    (interactive)
+    (if (one-window-p)
+      (winner-undo)
+      (delete-other-windows)))
+#+end_src
+
+
+#+begin_src emacs-lisp :tangle yes
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "C-SPC") 'toggle-maximize-window))
+#+end_src
+
+
+* VTerm
+#+begin_src emacs-lisp
+  (add-to-list 'display-buffer-alist
+               '((lambda (buffer-or-name _)
+                     (let ((buffer (get-buffer buffer-or-name)))
+                       (with-current-buffer buffer
+                         (or (equal major-mode 'vterm-mode)
+                             (string-prefix-p vterm-buffer-name (buffer-name buffer))))))
+                 (display-buffer-reuse-window display-buffer-in-side-window)
+                 (side . right)
+  	       (window-width . 0.5)
+                 (reusable-frames . visible)))
+    (use-package vterm
+      :ensure t)
+
+    (use-package vterm-toggle
+      :ensure t
+      :config
+      (define-key evil-normal-state-map (kbd "<leader> v v") 'vterm-toggle))
 #+end_src
