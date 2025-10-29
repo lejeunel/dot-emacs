@@ -223,6 +223,17 @@ directory navigation commands.  The commands can be bound in the
     :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 #+end_src
 
+** Dired Keybindings
+Use ~h~ to go up directory and ~l~ to open file (like netrw).
+
+#+begin_src emacs-lisp
+(with-eval-after-load 'dired
+  (evil-define-key 'normal dired-mode-map
+    (kbd "h") 'dired-up-directory
+    (kbd "l") 'dired-find-file
+    (kbd "r") 'revert-buffer))  ;; refresh buffer
+#+end_src
+
 * Consult
 Consult provides powerful completion and narrowing commands for Emacs.
 It integrates well with other completion frameworks like Vertico, enabling
