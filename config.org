@@ -1,0 +1,474 @@
+#+TITLE: My Emacs Config
+#+AUTHOR: Laurent Lejeune
+#+PROPERTY: header-args:emacs-lisp :tangle yes :results silent
+
+* Introduction
+
+This is my emacs configuration. It is still at a very early stage.
+
+* Preliminaries
+
+** Tangling Script
+Instead of bootstrapping the tangling process through ~init.el~,
+I prefer to resort to an "external" script. This is more manual
+but let's me control more precisely when I want to sync my config.
+
+#+begin_src sh
+#!/usr/bin/env bash
+emacs --batch \
+    -l org \
+    --eval "(setq org-src-preserve-indentation t)" \
+    "$1" \
+    -f org-babel-tangle
+#+end_src
+
+** First Installation
+Upon clean start, we typically want to purge the package manager cache, and install
+icons. We do this with a script of this form:
+
+#+begin_src sh
+EMACSDIR=$HOME/.config/emacs
+echo ">>> Deleting packages, grammars and native compilation cache ..."
+rm -rf $EMACSDIR/eln-cache $EMACSDIR/elpa $EMACSDIR/tree-sitter $EMACSDIR/elpaca $EMACSDIR/auto-save-list $EMACSDIR/transient
+echo ">>> Starting Emacs and auto-package fetching/installing ..."
+${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-install)"
+#+end_src
+
+* Variables
+#+begin_src emacs-lisp
+(defcustom ll/use-nerd-fonts t
+  "Configuration for using Nerd Fonts Symbols."
+  :type 'boolean
+  :group 'appearance)
+#+end_src
+
+* Elpaca
+#+begin_src emacs-lisp
+(defvar elpaca-installer-version 0.11)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (<= emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+;; Install `use-package` via Elpaca (for convenience)
+(elpaca elpaca-use-package
+  (elpaca-use-package-mode))
+#+end_src
+
+* Basic UI tweaks
+#+begin_src emacs-lisp
+(setq inhibit-startup-message t)
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(setq visible-bell nil)
+#+end_src
+
+* Embark
+Embark provides a powerful contextual action menu for Emacs, allowing
+you to perform various operations on completion candidates and other items.
+It extends the capabilities of completion frameworks by offering direct
+actions on the candidates.
+Just `<leader> .' over any text, explore it :)
+#+begin_src emacs-lisp
+(use-package embark
+  :ensure t
+  :defer t)
+#+end_src
+
+* Embark-Consult
+
+Embark-Consult provides a bridge between Embark and Consult, ensuring
+that Consult commands, like previews, are available when using Embark.
+#+begin_src emacs-lisp
+(use-package embark-consult
+  :ensure t
+  :hook
+  (embark-collect-mode . consult-preview-at-point-mode)) ;; Enable preview in Embark collect mode.
+#+end_src
+
+* Package management
+#+begin_src emacs-lisp
+;; Example packages managed by Elpaca
+(use-package transient
+  :ensure t)
+
+(use-package magit
+  :ensure t
+  :defer t)
+
+(use-package vertico
+  :ensure t
+  :init (vertico-mode))
+
+(use-package orderless
+  :ensure t
+  :after vertico
+  :custom (completion-styles '(orderless basic)))
+
+(use-package marginalia
+  :ensure t
+  :init (marginalia-mode))
+#+end_src
+
+* Consult
+Consult provides powerful completion and narrowing commands for Emacs.
+It integrates well with other completion frameworks like Vertico, enabling
+features like previews and enhanced register management. It's useful for
+navigating buffers, files, and xrefs with ease.
+
+#+begin_src emacs-lisp
+(use-package consult
+  :ensure t
+  :defer t
+  :init
+  ;; Enhance register preview with thin lines and no mode line.
+  (advice-add #'register-preview :override #'consult-register-window)
+
+  ;; Use Consult for xref locations with a preview feature.
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref))
+
+#+end_src
+
+* Treesitter
+Treesit-auto simplifies the use of Tree-sitter grammars in Emacs,
+providing automatic installation and mode association for various
+programming languages. This enhances syntax highlighting and
+code parsing capabilities, making it easier to work with modern
+programming languages.
+
+#+begin_src emacs-lisp
+(use-package treesit-auto
+  :ensure t
+  :after emacs
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode t))
+#+end_src
+
+* Org Mode setup
+#+begin_src emacs-lisp
+(use-package org
+  :ensure nil
+  :config
+  (setq org-startup-indented t
+        org-hide-emphasis-markers t))
+#+end_src
+
+* Appearance
+** Font
+#+begin_src emacs-lisp
+(set-face-attribute 'default nil :font "JetBrainsMono Nerd Font 16")
+#+end_src
+
+** Theme 
+#+begin_src emacs-lisp
+  (use-package modus-themes
+      :ensure t
+      :init
+      (load-theme 'modus-vivendi-tinted t))
+
+#+end_src
+
+** Modeline
+#+begin_src emacs-lisp
+(use-package doom-modeline
+    :ensure t
+    :defer t
+    :custom
+    (doom-modeline-buffer-file-name-style 'buffer-name)  ;; Set the buffer file name style to just the buffer name (without path).
+    (doom-modeline-project-detection 'project)           ;; Enable project detection for displaying the project name.
+    (doom-modeline-buffer-name t)                        ;; Show the buffer name in the mode line.
+    (doom-modeline-vcs-max-length 25)                    ;; Limit the version control system (VCS) branch name length to 25 characters.
+    :config
+    (if ll/use-nerd-fonts                                ;; Check if nerd fonts are being used.
+        (setq doom-modeline-icon t)                      ;; Enable icons in the mode line if nerd fonts are used.
+    (setq doom-modeline-icon nil))                     ;; Disable icons if nerd fonts are not being used.
+    :hook
+    (after-init . doom-modeline-mode))
+#+end_src
+
+** Nerd Icons
+The `nerd-icons' package provides a set of icons for use in Emacs. These icons can
+enhance the visual appearance of various modes and packages, making it easier to
+distinguish between different file types and functionalities.
+
+#+begin_src emacs-lisp
+(use-package nerd-icons
+:if ll/use-nerd-fonts
+:ensure t
+:defer t)
+#+end_src
+
+** Nerd Icons Dired
+The `nerd-icons-dired' package integrates nerd icons into the Dired mode,
+providing visual icons for files and directories. This enhances the Dired
+interface by making it easier to identify file types at a glance.
+
+#+begin_src emacs-lisp
+(use-package nerd-icons-dired
+:if ll/use-nerd-fonts                   ;; Load the package only if the user has configured to use nerd fonts.
+:ensure t                               ;; Ensure the package is installed.
+:defer t                                ;; Load the package only when needed to improve startup time.
+:hook
+(dired-mode . nerd-icons-dired-mode))
+#+end_src
+
+** Nerd Icons Completion
+The `nerd-icons-completion' package enhances the completion interfaces in
+Emacs by integrating nerd icons with completion frameworks such as
+`marginalia'. This provides visual cues for the completion candidates,
+making it easier to distinguish between different types of items.
+
+#+begin_src emacs-lisp
+(use-package nerd-icons-completion
+:if ll/use-nerd-fonts                   ;; Load the package only if the user has configured to use nerd fonts.
+:ensure t                               ;; Ensure the package is installed.
+:after (:all nerd-icons marginalia)     ;; Load after `nerd-icons' and `marginalia' to ensure proper integration.
+:config
+(nerd-icons-completion-mode)            ;; Activate nerd icons for completion interfaces.
+(add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)) ;; Setup icons in the marginalia mode for enhanced completion display.
+#+end_src
+
+* Editing enhancements
+
+#+begin_src emacs-lisp
+(use-package which-key
+  :ensure t
+  :init (which-key-mode))
+
+(use-package helpful
+  :ensure t
+  :bind
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-key] . helpful-key))
+#+end_src
+
+* Undo-tree
+The `undo-tree' package provides an advanced and visual way to
+manage undo history. It allows you to navigate and visualize your
+undo history as a tree structure, making it easier to manage
+changes in your buffers.
+
+#+begin_src emacs-lisp
+  (use-package undo-tree
+    :defer t
+    :ensure t
+    :init
+    (setq undo-tree-visualizer-timestamps t
+          undo-tree-visualizer-diff t
+          ;; Increase undo limits to avoid losing history due to Emacs' garbage collection.
+          ;; These values can be adjusted based on your needs.
+          ;; 10X bump of the undo limits to avoid issues with premature
+          ;; Emacs GC which truncates the undo history very aggressively.
+          undo-limit 800000                     ;; Limit for undo entries.
+          undo-strong-limit 12000000            ;; Strong limit for undo entries.
+          undo-outer-limit 120000000)           ;; Outer limit for undo entries.
+    (global-undo-tree-mode)
+    :config
+    ;; Set the directory where `undo-tree' will save its history files.
+    ;; This keeps undo history across sessions, stored in a cache directory.
+    (setq undo-tree-history-directory-alist '(("." . "~/config/emacs/.cache/undo"))))
+#+end_src
+
+* Evil
+#+begin_src emacs-lisp
+  (use-package evil
+    :ensure t
+    :init
+    (setq evil-want-integration t)      ;; Integrate `evil' with other Emacs features (optional as it's true by default).
+    (setq evil-want-keybinding nil)     ;; Disable default keybinding to set custom ones.
+    (setq evil-want-C-u-scroll t)       ;; Makes C-u scroll
+    (setq evil-want-C-u-delete t)       ;; Makes C-u delete on insert mode
+    :config
+    (evil-set-undo-system 'undo-tree)   ;; Uses the undo-tree package as the default undo system
+
+    ;; Set the leader key to space for easier access to custom commands. (setq evil-want-leader t)
+    (setq evil-leader/in-all-states t)  ;; Make the leader key available in all states.
+    (setq evil-want-fine-undo t)        ;; Evil uses finer grain undoing steps
+
+    ;; Define the leader key as Space
+    (evil-set-leader 'normal (kbd "SPC"))
+    (evil-set-leader 'visual (kbd "SPC"))
+
+    ;; Keybindings for searching and finding files.
+    (evil-define-key 'normal 'global (kbd "<leader> s f") 'consult-find)
+    (evil-define-key 'normal 'global (kbd "<leader> s g") 'consult-grep)
+    (evil-define-key 'normal 'global (kbd "<leader> s G") 'consult-git-grep)
+    (evil-define-key 'normal 'global (kbd "<leader> s r") 'consult-ripgrep)
+    (evil-define-key 'normal 'global (kbd "<leader> s h") 'consult-info)
+    (evil-define-key 'normal 'global (kbd "<leader> /") 'consult-line)
+
+    ;; Flymake navigation
+    (evil-define-key 'normal 'global (kbd "<leader> x x") 'consult-flymake);; Gives you something like `trouble.nvim'
+    (evil-define-key 'normal 'global (kbd "] d") 'flymake-goto-next-error) ;; Go to next Flymake error
+    (evil-define-key 'normal 'global (kbd "[ d") 'flymake-goto-prev-error) ;; Go to previous Flymake error
+
+    ;; Dired commands for file management
+    (evil-define-key 'normal 'global (kbd "<leader> x d") 'dired)
+    (evil-define-key 'normal 'global (kbd "<leader> x j") 'dired-jump)
+    (evil-define-key 'normal 'global (kbd "<leader> x f") 'find-file)
+
+    (evil-define-key 'normal 'global (kbd "<leader> f s") 'save-buffer)
+    (evil-define-key 'normal 'global (kbd "<leader> f f") 'dired-jump)
+
+    ;; Diff-HL navigation for version control
+    (evil-define-key 'normal 'global (kbd "] c") 'diff-hl-next-hunk) ;; Next diff hunk
+    (evil-define-key 'normal 'global (kbd "[ c") 'diff-hl-previous-hunk) ;; Previous diff hunk
+
+    ;; NeoTree command for file exploration
+    (evil-define-key 'normal 'global (kbd "<leader> e e") 'neotree-toggle)
+    (evil-define-key 'normal 'global (kbd "<leader> e d") 'dired-jump)
+
+    ;; Magit keybindings for Git integration
+    (evil-define-key 'normal 'global (kbd "<leader> g g") 'magit-status)      ;; Open Magit status
+    (evil-define-key 'normal 'global (kbd "<leader> g l") 'magit-log-current) ;; Show current log
+    (evil-define-key 'normal 'global (kbd "<leader> g d") 'magit-diff-buffer-file) ;; Show diff for the current file
+    (evil-define-key 'normal 'global (kbd "<leader> g D") 'diff-hl-show-hunk) ;; Show diff for a hunk
+    (evil-define-key 'normal 'global (kbd "<leader> g b") 'vc-annotate)       ;; Annotate buffer with version control info
+
+    ;; Buffer management keybindings
+    (evil-define-key 'normal 'global (kbd "] b") 'switch-to-next-buffer) ;; Switch to next buffer
+    (evil-define-key 'normal 'global (kbd "[ b") 'switch-to-prev-buffer) ;; Switch to previous buffer
+    (evil-define-key 'normal 'global (kbd "<leader> b b") 'ibuffer) ;; Open Ibuffer
+    (evil-define-key 'normal 'global (kbd "<leader> b d") 'kill-current-buffer) ;; Kill current buffer
+    (evil-define-key 'normal 'global (kbd "<leader> b k") 'kill-current-buffer) ;; Kill current buffer
+    (evil-define-key 'normal 'global (kbd "<leader> b x") 'kill-current-buffer) ;; Kill current buffer
+    (evil-define-key 'normal 'global (kbd "<leader> <") 'consult-buffer) ;; Consult buffer
+
+    ;; Project management keybindings
+    (evil-define-key 'normal 'global (kbd "<leader> p b") 'consult-project-buffer) ;; Consult project buffer
+    (evil-define-key 'normal 'global (kbd "<leader> p p") 'project-switch-project) ;; Switch project
+    (evil-define-key 'normal 'global (kbd "<leader> p f") 'project-find-file) ;; Find file in project
+    (evil-define-key 'normal 'global (kbd "<leader> p g") 'project-find-regexp) ;; Find regexp in project
+    (evil-define-key 'normal 'global (kbd "<leader> p k") 'project-kill-buffers) ;; Kill project buffers
+    (evil-define-key 'normal 'global (kbd "<leader> p D") 'project-dired) ;; Dired for project
+
+    ;; Yank from kill ring
+    (evil-define-key 'normal 'global (kbd "P") 'consult-yank-from-kill-ring)
+    (evil-define-key 'normal 'global (kbd "<leader> P") 'consult-yank-from-kill-ring)
+
+    ;; Embark actions for contextual commands
+    (evil-define-key 'normal 'global (kbd "<leader> .") 'embark-act)
+
+    ;; Undo tree visualization
+    (evil-define-key 'normal 'global (kbd "<leader> u") 'undo-tree-visualize)
+
+    ;; Help keybindings
+    (evil-define-key 'normal 'global (kbd "<leader> h m") 'describe-mode) ;; Describe current mode
+    (evil-define-key 'normal 'global (kbd "<leader> h f") 'describe-function) ;; Describe function
+    (evil-define-key 'normal 'global (kbd "<leader> h v") 'describe-variable) ;; Describe variable
+    (evil-define-key 'normal 'global (kbd "<leader> h k") 'describe-key) ;; Describe key
+
+    ;; Tab navigation
+    (evil-define-key 'normal 'global (kbd "] t") 'tab-next) ;; Go to next tab
+    (evil-define-key 'normal 'global (kbd "[ t") 'tab-previous) ;; Go to previous tab
+
+
+    ;; Custom example. Formatting with prettier tool.
+    (evil-define-key 'normal 'global (kbd "<leader> m p")
+                     (lambda ()
+                       (interactive)
+                       (shell-command (concat "prettier --write " (shell-quote-argument (buffer-file-name))))
+                       (revert-buffer t t t)))
+
+    ;; LSP commands keybindings
+    (evil-define-key 'normal lsp-mode-map
+                     ;; (kbd "gd") 'lsp-find-definition                ;; evil-collection already provides gd
+                     (kbd "gr") 'lsp-find-references                   ;; Finds LSP references
+                     (kbd "<leader> c a") 'lsp-execute-code-action     ;; Execute code actions
+                     (kbd "<leader> r n") 'lsp-rename                  ;; Rename symbol
+                     (kbd "gI") 'lsp-find-implementation               ;; Find implementation
+                     (kbd "<leader> l f") 'lsp-format-buffer)          ;; Format buffer via lsp
+
+
+    (defun ek/lsp-describe-and-jump ()
+      "Show hover documentation and jump to *lsp-help* buffer."
+      (interactive)
+      (lsp-describe-thing-at-point)
+      (let ((help-buffer "*lsp-help*"))
+        (when (get-buffer help-buffer)
+          (switch-to-buffer-other-window help-buffer))))
+
+    ;; Emacs 31 finaly brings us support for 'floating windows' (a.k.a. "child frames")
+    ;; to terminal Emacs. If you're still using 30, docs will be shown in a buffer at the
+    ;; inferior part of your frame.
+    (evil-define-key 'normal 'global (kbd "K")
+      (if (>= emacs-major-version 31)
+          #'eldoc-box-help-at-point
+          #'ek/lsp-describe-and-jump))
+
+    ;; Commenting functionality for single and multiple lines
+    (evil-define-key 'normal 'global (kbd "gcc")
+                     (lambda ()
+                       (interactive)
+                       (if (not (use-region-p))
+                           (comment-or-uncomment-region (line-beginning-position) (line-end-position)))))
+
+    (evil-define-key 'visual 'global (kbd "gc")
+                     (lambda ()
+                       (interactive)
+                       (if (use-region-p)
+                           (comment-or-uncomment-region (region-beginning) (region-end)))))
+
+
+    (evil-mode 1))
+#+end_src
+
+* Evil collection
+The `evil-collection' package enhances the integration of
+`evil-mode' with various built-in and third-party packages. It
+provides a better modal experience by remapping keybindings and
+commands to fit the `evil' style.
+#+begin_src emacs-lisp
+  (use-package evil-collection
+  :defer t
+  :ensure t
+  :init
+  (evil-collection-init)
+  :custom
+  (evil-collection-want-find-usages-bindings t)
+  :config
+  (setq evil-collection-setup-minibuffer t))
+#+end_src
+
+* Final touches
+#+begin_src emacs-lisp
+(message "✅ Emacs is ready!")
+#+end_src
