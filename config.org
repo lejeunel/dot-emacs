@@ -45,7 +45,7 @@ ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-instal
 
 * Elpaca
 #+begin_src emacs-lisp
-(setq elpaca-lock-file (expand-file-name "elpaca/" user-emacs-directory))
+(setq elpaca-lock-file (expand-file-name "elpaca-lock.el" user-emacs-directory))
 #+end_src
 
 Install Elpaca, our package manager.
@@ -148,6 +148,14 @@ Install Elpaca, our package manager.
     (evil-define-key 'normal 'global (kbd "<leader> p p") 'projectile-persp-switch-project))
 #+end_src
 
+* Recentf
+Log and retrieve most recent files
+#+begin_src emacs-lisp
+(use-package recentf
+  :init
+  (recentf-mode 1)
+  (setq recentf-max-menu-items 50))  ;; adjust the number of recent files
+#+end_src
 * Embark
 Embark provides a powerful contextual action menu for Emacs, allowing
 you to perform various operations on completion candidates and other items.
@@ -414,8 +422,9 @@ changes in your buffers.
 
     (evil-define-key 'normal 'global (kbd "<leader> f s") 'save-buffer)
 
-    ;; Dired commands for file management
+    ;; Dired commands and exploration
     (evil-define-key 'normal 'global (kbd "<leader> f f") 'find-file)
+    (evil-define-key 'normal 'global (kbd "<leader> f r") 'consult-recent-file)
     (evil-define-key 'normal 'global (kbd "<leader> f d") 'dired-jump)
 
     ;; Magit keybindings for Git integration
@@ -524,13 +533,14 @@ commands to fit the `evil' style.
 
 * LSP
 #+begin_src emacs-lisp
-(use-package lsp-mode
-    :ensure (lsp-mode :host github :repo "emacs-lsp/lsp-mode")
-    :commands lsp)
+  (use-package lsp-mode
+      :ensure (lsp-mode :host github :repo "emacs-lsp/lsp-mode")
+    :hook (python-ts-mode . lsp-deferred)
+      :commands (lsp lsp-deferred))
 
-(use-package lsp-ui
-    :ensure (lsp-ui :host github :repo "emacs-lsp/lsp-ui")
-    :commands lsp-ui-mode)
+  (use-package lsp-ui
+      :ensure (lsp-ui :host github :repo "emacs-lsp/lsp-ui")
+      :commands lsp-ui-mode)
 #+end_src
 
 * Python
@@ -538,9 +548,7 @@ commands to fit the `evil' style.
 (use-package lsp-pyright
     :ensure (lsp-pyright :host github :repo "emacs-lsp/lsp-pyright")
   :custom (lsp-pyright-langserver-command "basedpyright")
-  :hook (python-ts-mode . (lambda ()
-                          (require 'lsp-pyright)
-                          (lsp))))  ; or lsp-deferred
+  )
 #+end_src
 
 * Direnv
