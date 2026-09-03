@@ -27,11 +27,11 @@ Upon clean start, we typically want to purge the package manager cache, and inst
 icons. We do this with a script of this form:
 
 #+begin_src sh
-EMACSDIR=$HOME/.config/emacs
-echo ">>> Deleting packages, grammars and native compilation cache ..."
-rm -rf $EMACSDIR/eln-cache $EMACSDIR/elpa $EMACSDIR/tree-sitter $EMACSDIR/elpaca $EMACSDIR/auto-save-list $EMACSDIR/transient
-echo ">>> Starting Emacs and auto-package fetching/installing ..."
-${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-install)"
+  EMACSDIR=$HOME/.config/emacs
+  echo ">>> Deleting packages, grammars and native compilation cache ..."
+  rm -rf $EMACSDIR/eln-cache $EMACSDIR/elpa $EMACSDIR/tree-sitter $EMACSDIR/elpaca $EMACSDIR/auto-save-list $EMACSDIR/transient
+  echo ">>> Starting Emacs and auto-package fetching/installing ..."
+  ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-install)"
 #+end_src
 
 * Custom Variables
@@ -101,6 +101,41 @@ Install Elpaca, our package manager.
   (elpaca-use-package-mode))
 #+end_src
 
+#+begin_src emacs-lisp
+(use-package delsel
+  :ensure nil
+  :hook (after-init . delete-selection-mode))  
+#+end_src
+
+#+begin_src emacs-lisp
+(defun ll/keyboard-quit-dwim ()
+  "Do-What-I-Mean behaviour for a general `keyboard-quit'.
+
+The generic `keyboard-quit' does not do the expected thing when
+the minibuffer is open.  Whereas we want it to close the
+minibuffer, even without explicitly focusing it.
+
+The DWIM behaviour of this command is as follows:
+
+- When the region is active, disable it.
+- When a minibuffer is open, but not focused, close the minibuffer.
+- When the Completions buffer is selected, close it.
+- In every other case use the regular `keyboard-quit'."
+  (interactive)
+  (cond
+   ((region-active-p)
+    (keyboard-quit))
+   ((derived-mode-p 'completion-list-mode)
+    (delete-completion-window))
+   ((> (minibuffer-depth) 0)
+    (abort-recursive-edit))
+   (t
+    (keyboard-quit))))
+
+(define-key global-map (kbd "C-g") #'ll/keyboard-quit-dwim)
+
+#+end_src
+
 * Basic UI tweaks
 #+begin_src emacs-lisp
   (setq inhibit-startup-message t)
@@ -113,10 +148,7 @@ Install Elpaca, our package manager.
 * Project Management
 #+begin_src emacs-lisp
   (use-package consult-project-extra
-    :ensure t
-    :config
-    (with-eval-after-load 'evil
-      (define-key evil-normal-state-map (kbd "<leader> p p") 'consult-project-extra-find)))
+    :ensure t)
 #+end_src
 
 * Persistence and Workspaces
@@ -126,47 +158,9 @@ Install Elpaca, our package manager.
     :demand t
     :config
     (setq persp-suppress-no-prefix-key-warning t)
-    (persp-mode)
-    (with-eval-after-load 'evil
-      (define-prefix-command 'll/workspace-map)
-      (define-key evil-normal-state-map (kbd ",") 'll/workspace-map)
-
-      (define-key ll/workspace-map (kbd ",") #'project-switch-project) 
-      (define-key ll/workspace-map (kbd "n") #'persp-next)
-      (define-key ll/workspace-map (kbd "p") #'persp-prev)
-      (define-key ll/workspace-map (kbd "r") #'persp-rename)
-      (define-key ll/workspace-map (kbd "k") #'persp-kill)
-      (define-key ll/workspace-map (kbd "b") #'persp-switch-to-buffer*)
-      (define-key ll/workspace-map (kbd "a") #'persp-add-buffer)
-      (define-key ll/workspace-map (kbd "A") #'persp-set-buffer)))
+    (persp-mode))
 #+end_src
 
-* Harpoon
-This package offers quick bookmarks separated by project and branch.
-You can quick navigate between your working files and forget about that files
-opened that you will not use anymore.
-
-#+begin_src emacs-lisp
-  (use-package harpoon
-    :ensure (harpoon :host github :repo "otavioschwanck/harpoon.el")
-    :config 
-    (setq harpoon-project-package 'project)
-    (with-eval-after-load 'evil
-      (define-key evil-normal-state-map (kbd "<leader> r m") 'harpoon-quick-menu-hydra)
-      (define-key evil-normal-state-map (kbd "<leader> r a") 'harpoon-add-file)
-      (define-key evil-normal-state-map (kbd "<leader> r r") 'harpoon-toggle-file)
-      (define-key evil-normal-state-map (kbd "<leader> r t") 'harpoon-toggle-quick-menu)
-      (define-key evil-normal-state-map (kbd "<leader> r c") 'harpoon-clear)
-      (define-key evil-normal-state-map (kbd "<leader> 1") 'harpoon-go-to-1)
-      (define-key evil-normal-state-map (kbd "<leader> 2") 'harpoon-go-to-2)
-      (define-key evil-normal-state-map (kbd "<leader> 3") 'harpoon-go-to-3)
-      (define-key evil-normal-state-map (kbd "<leader> 4") 'harpoon-go-to-4)
-      (define-key evil-normal-state-map (kbd "<leader> 5") 'harpoon-go-to-5)
-      (define-key evil-normal-state-map (kbd "<leader> 6") 'harpoon-go-to-6)
-      (define-key evil-normal-state-map (kbd "<leader> 7") 'harpoon-go-to-7)
-      (define-key evil-normal-state-map (kbd "<leader> 8") 'harpoon-go-to-8)
-      (define-key evil-normal-state-map (kbd "<leader> 9") 'harpoon-go-to-9)))
-#+end_src
 * Recentf
 Log and retrieve most recent files
 #+begin_src emacs-lisp
@@ -201,8 +195,6 @@ that Consult commands, like previews, are available when using Embark.
 * Package management
 #+begin_src emacs-lisp
   ;; Example packages managed by Elpaca
-  (use-package transient
-    :ensure t)
 
   (use-package magit
     :ensure t
@@ -242,23 +234,6 @@ directory navigation commands.  The commands can be bound in the
     :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 #+end_src
 
-** Dired Keybindings
-Use ~h~ to go up directory and ~l~ to open file (like netrw).
-
-#+begin_src emacs-lisp
-(with-eval-after-load 'dired
-  (evil-define-key 'normal dired-mode-map
-    (kbd "h") 'dired-up-directory
-    (kbd "l") 'dired-find-file
-    (kbd "r") 'revert-buffer))  ;; refresh buffer
-#+end_src
-
-* Magit
-Make Magit commit buffer start in insert mode
-#+begin_src emacs-lisp
-(add-hook 'git-commit-mode-hook #'evil-insert-state)
-#+end_src
-
 * Consult
 Consult provides powerful completion and narrowing commands for Emacs.
 It integrates well with other completion frameworks like Vertico, enabling
@@ -266,16 +241,17 @@ features like previews and enhanced register management. It's useful for
 navigating buffers, files, and xrefs with ease.
 
 #+begin_src emacs-lisp
-(use-package consult
-  :ensure t
-  :defer t
-  :init
-  ;; Enhance register preview with thin lines and no mode line.
-  (advice-add #'register-preview :override #'consult-register-window)
+  (use-package consult
+    :ensure t
+    :defer t
+    :bind (("C-s" . consult-line))
+    :init
+    ;; Enhance register preview with thin lines and no mode line.
+    (advice-add #'register-preview :override #'consult-register-window)
 
-  ;; Use Consult for xref locations with a preview feature.
-  (setq xref-show-xrefs-function #'consult-xref
-        xref-show-definitions-function #'consult-xref))
+    ;; Use Consult for xref locations with a preview feature.
+    (setq xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref))
 
 #+end_src
 
@@ -443,181 +419,6 @@ changes in your buffers.
     (setq undo-tree-history-directory-alist '(("." . "~/config/emacs/.cache/undo"))))
 #+end_src
 
-* Evil
-
-#+begin_src emacs-lisp
-  (use-package evil
-    :ensure t
-    :init
-    (setq evil-want-integration t)      ;; Integrate `evil' with other Emacs features (optional as it's true by default).
-    (setq evil-want-keybinding nil)     ;; Disable default keybinding to set custom ones.
-    (setq evil-want-C-u-scroll t)       ;; Makes C-u scroll
-    (setq evil-want-C-u-delete t)       ;; Makes C-u delete on insert mode
-    :config
-    (evil-set-undo-system 'undo-tree)   ;; Uses the undo-tree package as the default undo system
-
-    ;; Set the leader key to space for easier access to custom commands. (setq evil-want-leader t)
-    (setq evil-leader/in-all-states t)  ;; Make the leader key available in all states.
-    (setq evil-want-fine-undo t)        ;; Evil uses finer grain undoing steps
-
-    ;; Define the leader key as Space
-    (evil-set-leader 'normal (kbd "SPC"))
-    (evil-set-leader 'visual (kbd "SPC"))
-
-    ;; Keybindings for searching and finding files.
-    (evil-define-key 'normal 'global (kbd "<leader> s f") 'consult-find)
-    (evil-define-key 'normal 'global (kbd "<leader> s g") 'consult-grep)
-    (evil-define-key 'normal 'global (kbd "<leader> s G") 'consult-git-grep)
-    (evil-define-key 'normal 'global (kbd "<leader> s r") 'consult-ripgrep)
-    (evil-define-key 'normal 'global (kbd "<leader> s h") 'consult-info)
-    (evil-define-key 'normal 'global (kbd "<leader> /") 'consult-line)
-
-    ;; Flymake navigation
-    (evil-define-key 'normal 'global (kbd "<leader> x x") 'consult-flymake);; Gives you something like `trouble.nvim'
-    (evil-define-key 'normal 'global (kbd "] d") 'flymake-goto-next-error) ;; Go to next Flymake error
-    (evil-define-key 'normal 'global (kbd "[ d") 'flymake-goto-prev-error) ;; Go to previous Flymake error
-
-    (evil-define-key 'normal 'global (kbd "<leader> f s") 'save-buffer)
-
-    ;; Dired commands and exploration
-    (evil-define-key 'normal 'global (kbd "<leader> f f") 'find-file)
-    (evil-define-key 'normal 'global (kbd "<leader> f r") 'consult-recent-file)
-    (evil-define-key 'normal 'global (kbd "<leader> f d") 'dired-jump)
-
-    ;; Magit keybindings for Git integration
-    (evil-define-key 'normal 'global (kbd "<leader> g g") 'magit-status)      ;; Open Magit status
-    (evil-define-key 'normal 'global (kbd "<leader> g l") 'magit-log-current) ;; Show current log
-    (evil-define-key 'normal 'global (kbd "<leader> g d") 'magit-diff-buffer-file) ;; Show diff for the current file
-    (evil-define-key 'normal 'global (kbd "<leader> g D") 'diff-hl-show-hunk) ;; Show diff for a hunk
-    (evil-define-key 'normal 'global (kbd "<leader> g b") 'vc-annotate)       ;; Annotate buffer with version control info
-
-    ;; Buffer management keybindings
-    (evil-define-key 'normal 'global (kbd "<leader> k") 'switch-to-next-buffer)
-    (evil-define-key 'normal 'global (kbd "<leader> j") 'switch-to-prev-buffer)
-    (evil-define-key 'normal 'global (kbd "<leader> x") 'kill-current-buffer) 
-    (evil-define-key 'normal 'global (kbd "<leader> <") 'll/consult-project-or-all-buffers)
-
-    ;; Project management keybindings
-    (evil-define-key 'normal 'global (kbd "<leader> p b") 'consult-project-buffer) ;; Consult project buffer
-    (evil-define-key 'normal 'global (kbd "<leader> p f") 'project-find-file) ;; Find file in project
-    (evil-define-key 'normal 'global (kbd "<leader> p g") 'project-find-regexp) ;; Find regexp in project
-    (evil-define-key 'normal 'global (kbd "<leader> p k") 'project-kill-buffers) ;; Kill project buffers
-    (evil-define-key 'normal 'global (kbd "<leader> p D") 'project-dired) ;; Dired for project
-
-    ;; Yank from kill ring
-    (evil-define-key 'normal 'global (kbd "P") 'consult-yank-from-kill-ring)
-    (evil-define-key 'normal 'global (kbd "<leader> P") 'consult-yank-from-kill-ring)
-
-    ;; Embark actions for contextual commands
-    (evil-define-key 'normal 'global (kbd "<leader> .") 'embark-act)
-
-    ;; Undo tree visualization
-    (evil-define-key 'normal 'global (kbd "<leader> u") 'undo-tree-visualize)
-
-    ;; Help keybindings
-    (evil-define-key 'normal 'global (kbd "<leader> h m") 'describe-mode) ;; Describe current mode
-    (evil-define-key 'normal 'global (kbd "<leader> h f") 'describe-function) ;; Describe function
-    (evil-define-key 'normal 'global (kbd "<leader> h v") 'describe-variable) ;; Describe variable
-    (evil-define-key 'normal 'global (kbd "<leader> h k") 'describe-key)
-
-    ;; Window keybindings
-    (evil-define-key 'normal 'global (kbd "<leader> w d") 'delete-window) 
-    (evil-define-key 'normal 'global (kbd "<leader> TAB") 'other-window) 
-
-    (define-key evil-normal-state-map (kbd "C-l") 'evil-window-right)
-    (define-key evil-normal-state-map (kbd "C-h") 'evil-window-left)
-    (define-key evil-insert-state-map (kbd "C-l") 'evil-window-right)
-    (define-key evil-insert-state-map (kbd "C-h") 'evil-window-left)
-
-    ;; Tab navigation
-    (evil-define-key 'normal 'global (kbd "] t") 'tab-next) ;; Go to next tab
-    (evil-define-key 'normal 'global (kbd "[ t") 'tab-previous) ;; Go to previous tab
-
-    ;; LSP commands keybindings
-    (evil-define-key 'normal lsp-mode-map
-      ;; (kbd "gd") 'lsp-find-definition                ;; evil-collection already provides gd
-      (kbd "gr") 'lsp-find-references                   ;; Finds LSP references
-      (kbd "<leader> c a") 'lsp-execute-code-action     ;; Execute code actions
-      (kbd "<leader> r n") 'lsp-rename                  ;; Rename symbol
-      (kbd "gI") 'lsp-find-implementation               ;; Find implementation
-      (kbd "<leader> l f") 'lsp-format-buffer)          ;; Format buffer via lsp
-
-    (defun ek/lsp-describe-and-jump ()
-      "Show hover documentation and jump to *lsp-help* buffer."
-      (interactive)
-      (lsp-describe-thing-at-point)
-      (let ((help-buffer "*lsp-help*"))
-        (when (get-buffer help-buffer)
-          (switch-to-buffer-other-window help-buffer))))
-
-    ;; Emacs 31 finaly brings us support for 'floating windows' (a.k.a. "child frames")
-    ;; to terminal Emacs. If you're still using 30, docs will be shown in a buffer at the
-    ;; inferior part of your frame.
-    (evil-define-key 'normal 'global (kbd "K")
-      (if (>= emacs-major-version 31)
-          #'eldoc-box-help-at-point
-        #'ek/lsp-describe-and-jump))
-
-    ;; Commenting functionality for single and multiple lines
-    (evil-define-key 'normal 'global (kbd "gcc")
-      (lambda ()
-        (interactive)
-        (if (not (use-region-p))
-            (comment-or-uncomment-region (line-beginning-position) (line-end-position)))))
-
-    (evil-define-key 'visual 'global (kbd "gc")
-      (lambda ()
-        (interactive)
-        (if (use-region-p)
-            (comment-or-uncomment-region (region-beginning) (region-end)))))
-
-
-    (evil-mode 1))
-#+end_src
-
-** Evil Snipe
-
-#+begin_src emacs-lisp
-  (use-package evil-snipe
-    :ensure (evil-snipe :host github :repo "hlissner/evil-snipe")
-    :init
-    (evil-snipe-mode +1)
-    (evil-snipe-override-mode 1))
-#+end_src
-
-** Evil collection
-The `evil-collection' package enhances the integration of
-`evil-mode' with various built-in and third-party packages. It
-provides a better modal experience by remapping keybindings and
-commands to fit the `evil' style.
-#+begin_src emacs-lisp
-  (use-package evil-collection
-  :defer t
-  :ensure t
-  :init
-  (evil-collection-init)
-  :custom
-  (evil-collection-want-find-usages-bindings t)
-  :config
-  (setq evil-collection-setup-minibuffer t))
-#+end_src
-
-** Search from visual selection
-
-#+begin_src emacs-lisp
-  (use-package evil-visualstar
-    :ensure (evil-visualstar :host github :repo "bling/evil-visualstar")
-    :init (global-evil-visualstar-mode))
-
-  (defun ll/evil-ex-search-show-count-advice (&rest _)
-    "Show current match count in the modeline for visual star search."
-    (when (evil-visual-state-p)
-      ;; force update of search count
-      (evil-ex-search-update)))
-
-  (advice-add 'evil-visualstar/begin-search-forward :after #'ll/evil-ex-search-show-count-advice)
-  (advice-add 'evil-visualstar/begin-search-backward :after #'ll/evil-ex-search-show-count-advice)
-#+end_src
 
 * LSP
 #+begin_src emacs-lisp
@@ -704,29 +505,3 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
 #+end_src
 
 
-#+begin_src emacs-lisp :tangle yes
-  (with-eval-after-load 'evil
-    (define-key evil-normal-state-map (kbd "C-SPC") 'toggle-maximize-window))
-#+end_src
-
-
-* VTerm
-#+begin_src emacs-lisp
-  (add-to-list 'display-buffer-alist
-               '((lambda (buffer-or-name _)
-                     (let ((buffer (get-buffer buffer-or-name)))
-                       (with-current-buffer buffer
-                         (or (equal major-mode 'vterm-mode)
-                             (string-prefix-p vterm-buffer-name (buffer-name buffer))))))
-                 (display-buffer-reuse-window display-buffer-in-side-window)
-                 (side . right)
-  	       (window-width . 0.5)
-                 (reusable-frames . visible)))
-    (use-package vterm
-      :ensure t)
-
-    (use-package vterm-toggle
-      :ensure t
-      :config
-      (define-key evil-normal-state-map (kbd "<leader> v v") 'vterm-toggle))
-#+end_src
