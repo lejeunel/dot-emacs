@@ -1,37 +1,26 @@
 #+TITLE: My Emacs Config
 #+AUTHOR: Laurent Lejeune
 #+PROPERTY: header-args:emacs-lisp :tangle yes :results silent
+#+PROPERTY: header-args :tangle "~/.config/vemacs/config.el" :lexical t
 
 * Introduction
 
 This is my emacs configuration. It is still at a very early stage.
 
-* Preliminaries
+#+begin_src emacs-lisp :tangle "early-init.el"
+;;; early-init.el -*- lexical-binding: t; -*-
+(setq package-enable-at-startup nil)
 
-** Tangling Script
-Instead of bootstrapping the tangling process through ~init.el~,
-I prefer to resort to an "external" script. This is more manual
-but let's me control more precisely when I want to sync my config.
+;;; disable white screen flash on GUI startup
+(setq default-frame-alist '(
+  (background-color . "#000000")
+  (ns-appearance . dark)
+  (ns-transparent-titlebar . t)))
 
-#+begin_src sh
-#!/usr/bin/env bash
-emacs --batch \
-    -l org \
-    --eval "(setq org-src-preserve-indentation t)" \
-    "$1" \
-    -f org-babel-tangle
 #+end_src
 
-** First Installation
-Upon clean start, we typically want to purge the package manager cache, and install
-icons. We do this with a script of this form:
-
-#+begin_src sh
-  EMACSDIR=$HOME/.config/emacs
-  echo ">>> Deleting packages, grammars and native compilation cache ..."
-  rm -rf $EMACSDIR/eln-cache $EMACSDIR/elpa $EMACSDIR/tree-sitter $EMACSDIR/elpaca $EMACSDIR/auto-save-list $EMACSDIR/transient
-  echo ">>> Starting Emacs and auto-package fetching/installing ..."
-  ${pkgs.emacs-pgtk}/bin/emacs --init-dir="$EMACSDIR" -nw --eval="(ll/first-install)"
+#+begin_src emacs-lisp
+;;; config.el -*- lexical-binding: t; -*-
 #+end_src
 
 * Custom Variables
@@ -58,47 +47,49 @@ Change the yes/no prompt to y/n
 Install Elpaca, our package manager.
 
 #+begin_src emacs-lisp
-(defvar elpaca-installer-version 0.11)
-(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil :depth 1 :inherit ignore
-                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-                              :build (:not elpaca--activate-package)))
-(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-       (build (expand-file-name "elpaca/" elpaca-builds-directory))
-       (order (cdr elpaca-order))
-       (default-directory repo))
-  (add-to-list 'load-path (if (file-exists-p build) build repo))
-  (unless (file-exists-p repo)
-    (make-directory repo t)
-    (when (<= emacs-major-version 28) (require 'subr-x))
-    (condition-case-unless-debug err
-        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-                                                  ,@(when-let* ((depth (plist-get order :depth)))
-                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
-                                                  ,(plist-get order :repo) ,repo))))
-                  ((zerop (call-process "git" nil buffer t "checkout"
-                                        (or (plist-get order :ref) "--"))))
-                  (emacs (concat invocation-directory invocation-name))
-                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-                  ((require 'elpaca))
-                  ((elpaca-generate-autoloads "elpaca" repo)))
-            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-          (error "%s" (with-current-buffer buffer (buffer-string))))
-      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
-  (unless (require 'elpaca-autoloads nil t)
-    (require 'elpaca)
-    (elpaca-generate-autoloads "elpaca" repo)
-    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
-(add-hook 'after-init-hook #'elpaca-process-queues)
-(elpaca `(,@elpaca-order))
-;; Install `use-package` via Elpaca (for convenience)
-(elpaca elpaca-use-package
-  (elpaca-use-package-mode))
+  (defvar elpaca-installer-version 0.12)
+  (defvar elpaca-core-date '(20260814))
+  (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+  (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+  (defvar elpaca-sources-directory (expand-file-name "sources/" elpaca-directory))
+  (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                                :ref nil :depth 1 :inherit ignore
+                                :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                                :build (:not elpaca-activate)))
+  (let* ((repo  (expand-file-name "elpaca/" elpaca-sources-directory))
+         (build (expand-file-name "elpaca/" elpaca-builds-directory))
+         (order (cdr elpaca-order))
+         (default-directory repo))
+    (add-to-list 'load-path (if (file-exists-p build) build repo))
+    (unless (file-exists-p repo)
+      (make-directory repo t)
+      (when (<= emacs-major-version 28) (require 'subr-x))
+      (condition-case-unless-debug err
+          (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                    ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                    ,@(when-let* ((depth (plist-get order :depth)))
+                                                        (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                    ,(plist-get order :repo) ,repo))))
+                    ((zerop (call-process "git" nil buffer t "checkout"
+                                          (or (plist-get order :ref) "--"))))
+                    (emacs (concat invocation-directory invocation-name))
+                    ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                          "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                    ((require 'elpaca))
+                    ((elpaca-generate-autoloads "elpaca" repo)))
+              (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+            (error "%s" (with-current-buffer buffer (buffer-string))))
+        ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+    (unless (require 'elpaca-autoloads nil t)
+      (require 'elpaca)
+      (elpaca-generate-autoloads "elpaca" repo)
+      (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
+  (add-hook 'after-init-hook #'elpaca-process-queues)
+  (elpaca `(,@elpaca-order))
+
+  (elpaca elpaca-use-package
+    ;; Enable use-package :ensure support for Elpaca.
+    (elpaca-use-package-mode))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -143,22 +134,6 @@ The DWIM behaviour of this command is as follows:
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (setq visible-bell nil)
-#+end_src
-
-* Project Management
-#+begin_src emacs-lisp
-  (use-package consult-project-extra
-    :ensure t)
-#+end_src
-
-* Persistence and Workspaces
-#+begin_src emacs-lisp
-  (use-package perspective
-    :ensure (perspective :host github :repo "nex3/perspective-el")
-    :demand t
-    :config
-    (setq persp-suppress-no-prefix-key-warning t)
-    (persp-mode))
 #+end_src
 
 * Recentf
@@ -241,17 +216,16 @@ features like previews and enhanced register management. It's useful for
 navigating buffers, files, and xrefs with ease.
 
 #+begin_src emacs-lisp
-  (use-package consult
-    :ensure t
-    :defer t
-    :bind (("C-s" . consult-line))
-    :init
-    ;; Enhance register preview with thin lines and no mode line.
-    (advice-add #'register-preview :override #'consult-register-window)
+   (use-package consult
+     :ensure t
+     :defer t
+     :init
+     ;; Enhance register preview with thin lines and no mode line.
+     (advice-add #'register-preview :override #'consult-register-window)
 
-    ;; Use Consult for xref locations with a preview feature.
-    (setq xref-show-xrefs-function #'consult-xref
-          xref-show-definitions-function #'consult-xref))
+     ;; Use Consult for xref locations with a preview feature.
+     (setq xref-show-xrefs-function #'consult-xref
+           xref-show-definitions-function #'consult-xref))
 
 #+end_src
 
@@ -274,7 +248,7 @@ programming languages.
 #+begin_src emacs-lisp
 (use-package treesit-auto
   :ensure t
-  :after emacs
+  ;; :after emacs
   :custom
   (treesit-auto-install 'prompt)
   :config
@@ -383,13 +357,6 @@ making it easier to distinguish between different types of items.
 (use-package which-key
   :ensure t
   :init (which-key-mode))
-
-(use-package helpful
-  :ensure t
-  :bind
-  ([remap describe-function] . helpful-callable)
-  ([remap describe-variable] . helpful-variable)
-  ([remap describe-key] . helpful-key))
 #+end_src
 
 * Undo-tree
@@ -422,28 +389,27 @@ changes in your buffers.
 
 * LSP
 #+begin_src emacs-lisp
-  (use-package lsp-mode
-    :ensure (lsp-mode :host github :repo "emacs-lsp/lsp-mode")
-    :hook (python-ts-mode . lsp-deferred)
-    :commands (lsp lsp-deferred)
-    :config
-    (setq lsp-prefer-capf t)  ;; Use completion-at-point-functions (CAPF) as backend 
-    )
+    (use-package lsp-mode
+    :init
+    ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+    (setq lsp-keymap-prefix "C-c l")
+    :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+           (XXX-mode . lsp)
+           ;; if you want which-key integration
+           (lsp-mode . lsp-enable-which-key-integration))
+    :commands lsp)
 
-  (use-package lsp-ui
-    :ensure (lsp-ui :host github :repo "emacs-lsp/lsp-ui")
-    :commands lsp-ui-mode)
+  ;; optionally
+  (use-package lsp-ui :commands lsp-ui-mode)
+  ;; if you are helm user
+  (use-package helm-lsp :commands helm-lsp-workspace-symbol)
+  ;; if you are ivy user
+  (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+  (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
 #+end_src
 
 * Python
 
-** LSP
-#+begin_src emacs-lisp
-  (use-package lsp-pyright
-      :ensure (lsp-pyright :host github :repo "emacs-lsp/lsp-pyright")
-    :custom (lsp-pyright-langserver-command "basedpyright")
-    )
-#+end_src
 ** Breakpoints
 
 Bindings and functions to add and highlight breakpoints.
@@ -476,13 +442,6 @@ variables process-environment and exec-path.
 
 The result is that programs started from within emacs, such as inferior shells, linters,
 compilers, and test runners, will be looked up in the correct $PATH, and will be started with the correct environment variables set.
-
-#+begin_src emacs-lisp
-  (use-package direnv
-      :ensure (direnv :host github :repo "wbolster/emacs-direnv")
-      :config
-      (direnv-mode))
-#+end_src
 
 * Org-mode
 #+begin_src emacs-lisp
