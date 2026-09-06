@@ -144,6 +144,7 @@ Log and retrieve most recent files
   (recentf-mode 1)
   (setq recentf-max-menu-items 50))  ;; adjust the number of recent files
 #+end_src
+
 * Embark
 Embark provides a powerful contextual action menu for Emacs, allowing
 you to perform various operations on completion candidates and other items.
@@ -167,18 +168,20 @@ that Consult commands, like previews, are available when using Embark.
   (embark-collect-mode . consult-preview-at-point-mode)) ;; Enable preview in Embark collect mode.
 #+end_src
 
-* Package management
+* Magit
 #+begin_src emacs-lisp
-  ;; Example packages managed by Elpaca
-
   (use-package magit
     :ensure t
     :defer t)
+#+end_src
+
+* Minibuffer search
+#+begin_src emacs-lisp
+  ;; Example packages managed by Elpaca
 
   (use-package vertico
     :ensure t
     :init (vertico-mode))
-
 
   (use-package orderless
     :ensure t
@@ -216,17 +219,19 @@ features like previews and enhanced register management. It's useful for
 navigating buffers, files, and xrefs with ease.
 
 #+begin_src emacs-lisp
-   (use-package consult
-     :ensure t
-     :defer t
-     :init
-     ;; Enhance register preview with thin lines and no mode line.
-     (advice-add #'register-preview :override #'consult-register-window)
+    (use-package consult
+          :ensure t
+          :defer t
+          :bind
+          (("C-c f" . consult-flymake)
+  	 ("C-x b" . ll/consult-project-or-all-buffers))
+          :init
+          ;; Enhance register preview with thin lines and no mode line.
+          (advice-add #'register-preview :override #'consult-register-window)
 
-     ;; Use Consult for xref locations with a preview feature.
-     (setq xref-show-xrefs-function #'consult-xref
-           xref-show-definitions-function #'consult-xref))
-
+          ;; Use Consult for xref locations with a preview feature.
+          (setq xref-show-xrefs-function #'consult-xref
+                xref-show-definitions-function #'consult-xref))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -248,7 +253,6 @@ programming languages.
 #+begin_src emacs-lisp
 (use-package treesit-auto
   :ensure t
-  ;; :after emacs
   :custom
   (treesit-auto-install 'prompt)
   :config
@@ -268,7 +272,15 @@ programming languages.
 * Appearance
 ** Font
 #+begin_src emacs-lisp
-(set-face-attribute 'default nil :font "JetBrainsMono Nerd Font 16")
+  (set-face-attribute 'default nil
+                      :family "JetBrainsMono Nerd Font"
+                      :height 150)  
+#+end_src
+
+** Line numbers
+#+begin_src emacs-lisp
+  (display-line-numbers-mode)
+  (setq display-line-numbers 'relative)
 #+end_src
 
 ** Theme 
@@ -279,22 +291,87 @@ programming languages.
       (load-theme 'modus-vivendi-tinted t))
 #+end_src
 
-** Modeline
+By default, tree-sitter does not colorize enough to my taste:
 #+begin_src emacs-lisp
-  (use-package doom-modeline
-      :ensure t
-      :defer t
-      :custom
-      (doom-modeline-buffer-file-name-style 'buffer-name)  ;; Set the buffer file name style to just the buffer name (without path).
-      (doom-modeline-project-detection 'project)           ;; Enable project detection for displaying the project name.
-      (doom-modeline-buffer-name t)                        ;; Show the buffer name in the mode line.
-      (doom-modeline-vcs-max-length 25)                    ;; Limit the version control system (VCS) branch name length to 25 characters.
-      :config
-      (if ll/use-nerd-fonts                                ;; Check if nerd fonts are being used.
-          (setq doom-modeline-icon t)                      ;; Enable icons in the mode line if nerd fonts are used.
-          (setq doom-modeline-icon nil))                     ;; Disable icons if nerd fonts are not being used.
-      :init
-      (doom-modeline-mode 1))
+  (setq treesit-font-lock-level 4)
+#+end_src
+
+** isearch
+#+begin_src emacs-lisp
+  (setq isearch-lazy-count t)
+#+end_src
+
+** Auto-complete
+
+#+begin_src emacs-lisp
+(use-package completion-preview
+  :ensure nil
+  :demand t
+  :bind
+  ( :map completion-preview-active-mode-map
+    ("M-i" . completion-preview-insert-word)
+    ("M-n" . completion-preview-next-candidate)
+    ("M-p" . completion-preview-prev-candidate)
+    ("M-<return>" . completion-preview-insert)
+    ;; With TAB we effectively defer to the *Completions* buffer to
+    ;; show more completion candidates at once.
+    ("<tab>" . completion-preview-complete))
+  :config
+  (setq completion-preview-minimum-symbol-length 2)
+  (with-eval-after-load 'org
+    (add-to-list 'completion-preview-commands #'org-self-insert-command))
+  (global-completion-preview-mode 1))
+
+
+(use-package minibuffer
+ :ensure nil
+  :config
+  ;; Do not inform me about the default keybindings to select a
+  ;; candidate.
+  (setq completion-show-help nil)
+
+  ;; Do not print messages in the echo area that pertain to
+  ;; completion---those are distracting.
+  (setq completion-show-inline-help nil)
+
+  ;; Show useful annotations in various minibuffer prompts (though the
+  ;; `marginalia' package greatly improves this).
+  (setq completions-detailed t)
+
+  ;; Do not use rows and columns for completions: a single vertical
+  ;; list is easier to follow.
+  (setq completions-format 'one-column)
+
+  ;; Put an upper limit to the Completions window, so that it does not
+  ;; disorient me.
+  (setq completions-max-height 12)
+
+  ;; Rely on previous inputs to surface candidates towards the top of
+  ;; the list (enable the built-in `savehist-mode' to persist
+  ;; history).
+  (setq completions-sort 'historical)
+
+  ;; Show the Completions buffer if I hit TAB but there is no unique match yet.
+  (setq completion-auto-help t)
+
+  ;; Never switch to the Completions buffer when I type TAB, because I
+  ;; want to select candidates while the minibuffer is still in focus,
+  ;; per `minibuffer-visible-completions'.  This has the advantage of
+  ;; auto-updating the completions as I type.
+  (setq completion-auto-select nil
+        minibuffer-visible-completions t)
+
+  ;; Those two are also relevant for the `completion-category-overrides', which I
+  ;; cover elsewhere in this article.
+  (setq completion-eager-display t)
+  (setq completion-eager-update t))
+#+end_src
+
+#+begin_src emacs-lisp
+  (use-package direnv
+    :ensure t
+    :config
+    (direnv-mode))
 #+end_src
 
 ** Nerd Icons
@@ -303,10 +380,10 @@ enhance the visual appearance of various modes and packages, making it easier to
 distinguish between different file types and functionalities.
 
 #+begin_src emacs-lisp
-(use-package nerd-icons
-:if ll/use-nerd-fonts
-:ensure t
-:defer t)
+  (use-package nerd-icons
+    :if ll/use-nerd-fonts
+    :ensure t
+    :defer t)
 #+end_src
 
 ** Nerd Icons Dired
@@ -315,12 +392,12 @@ providing visual icons for files and directories. This enhances the Dired
 interface by making it easier to identify file types at a glance.
 
 #+begin_src emacs-lisp
-(use-package nerd-icons-dired
-:if ll/use-nerd-fonts                   ;; Load the package only if the user has configured to use nerd fonts.
-:ensure t                               ;; Ensure the package is installed.
-:defer t                                ;; Load the package only when needed to improve startup time.
-:hook
-(dired-mode . nerd-icons-dired-mode))
+  (use-package nerd-icons-dired
+    :if ll/use-nerd-fonts                   ;; Load the package only if the user has configured to use nerd fonts.
+    :ensure t                               ;; Ensure the package is installed.
+    :defer t                                ;; Load the package only when needed to improve startup time.
+    :hook
+    (dired-mode . nerd-icons-dired-mode))
 #+end_src
 
 ** Nerd Icons Completion
@@ -330,13 +407,13 @@ Emacs by integrating nerd icons with completion frameworks such as
 making it easier to distinguish between different types of items.
 
 #+begin_src emacs-lisp
-(use-package nerd-icons-completion
-:if ll/use-nerd-fonts                   ;; Load the package only if the user has configured to use nerd fonts.
-:ensure t                               ;; Ensure the package is installed.
-:after (:all nerd-icons marginalia)     ;; Load after `nerd-icons' and `marginalia' to ensure proper integration.
-:config
-(nerd-icons-completion-mode)            ;; Activate nerd icons for completion interfaces.
-(add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)) ;; Setup icons in the marginalia mode for enhanced completion display.
+  (use-package nerd-icons-completion
+    :if ll/use-nerd-fonts                   ;; Load the package only if the user has configured to use nerd fonts.
+    :ensure t                               ;; Ensure the package is installed.
+    :after (:all nerd-icons marginalia)     ;; Load after `nerd-icons' and `marginalia' to ensure proper integration.
+    :config
+    (nerd-icons-completion-mode)            ;; Activate nerd icons for completion interfaces.
+    (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)) ;; Setup icons in the marginalia mode for enhanced completion display.
 #+end_src
 * Auto-completion
 #+begin_src emacs-lisp
@@ -386,37 +463,86 @@ changes in your buffers.
     (setq undo-tree-history-directory-alist '(("." . "~/config/emacs/.cache/undo"))))
 #+end_src
 
-
-* LSP
+* Programming
+** Language Servers
 #+begin_src emacs-lisp
-    (use-package lsp-mode
-    :init
-    ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
-    (setq lsp-keymap-prefix "C-c l")
-    :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
-           (XXX-mode . lsp)
-           ;; if you want which-key integration
-           (lsp-mode . lsp-enable-which-key-integration))
-    :commands lsp)
+  (use-package eglot)
+#+end_src
 
-  ;; optionally
-  (use-package lsp-ui :commands lsp-ui-mode)
-  ;; if you are helm user
-  (use-package helm-lsp :commands helm-lsp-workspace-symbol)
-  ;; if you are ivy user
-  (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-  (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+** Auto-formatting
+#+begin_src emacs-lisp
+  (use-package reformatter
+    :ensure t
+    :config
+    (reformatter-define ruff-format ;; format python files
+      :program "ruff"
+      :args `("format" "--stdin-filename" ,(or (buffer-file-name) input-file))))
+#+end_src
+
+* Go
+#+begin_src emacs-lisp
+  (add-hook 'go-ts-mode-hook #'eglot-ensure)
 #+end_src
 
 * Python
 
+** Eglot
+#+begin_src emacs-lisp
+  (add-hook 'python-ts-mode-hook #'eglot-ensure)
+#+end_src
+
+** Buffer formatting
+
+Use Ruff to automatically format buffer on save.
+
+#+begin_src emacs-lisp
+(add-hook 'python-ts-mode-hook #'ruff-format-on-save-mode)
+#+end_src
+
+#+begin_src emacs-lisp
+  (defun ll/ruff-fix-imports ()
+    "Fix imports in the current Python buffer using Ruff.
+  Never modifies the file on disk."
+    (interactive)
+    (unless (derived-mode-p 'python-mode)
+      (user-error "Not a Python buffer"))
+    (let* ((filename (or (buffer-file-name) "stdin.py"))
+           (temp-file (make-temp-file "ruff-" nil ".py")))
+      (unwind-protect
+          (progn
+            (write-region (point-min) (point-max) temp-file nil 'silent)
+
+            (let ((exit-code
+                   (call-process "ruff" nil nil nil
+                                 "check"
+                                 "--fix"
+                                 "--select" "I,F"
+                                 temp-file)))
+              (unless (memq exit-code '(0 1))
+                (user-error "Ruff failed with exit code %d" exit-code)))
+
+            (let ((point-offset (- (point) (point-min))))
+              (erase-buffer)
+              (insert-file-contents temp-file)
+              (goto-char (min (+ (point-min) point-offset)
+                              (point-max)))
+              (set-buffer-modified-p t)))
+
+        (delete-file temp-file))))
+
+(add-hook 'python-ts-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook
+                      #'ll/ruff-fix-imports
+                      nil t)))
+#+end_src
 ** Breakpoints
 
 Bindings and functions to add and highlight breakpoints.
 #+begin_src emacs-lisp :tangle yes
 (defvar python--pdb-breakpoint-string "breakpoint()")
 (defun ll/python-add-breakpoint ()
-"Inserts a python breakpoint using `pdb'"
+t"Inserts a python breakpoint using `pdb'"
     (interactive)
     (back-to-indentation)
     ;; this preserves the correct indentation in case the line above
@@ -437,6 +563,7 @@ Bindings and functions to add and highlight breakpoints.
 #+end_src
 
 * Direnv
+
 Direnv works by invoking direnv to obtain the environment for the current file, then updating the emacs
 variables process-environment and exec-path.
 
