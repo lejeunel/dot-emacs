@@ -415,21 +415,11 @@ making it easier to distinguish between different types of items.
     (nerd-icons-completion-mode)            ;; Activate nerd icons for completion interfaces.
     (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup)) ;; Setup icons in the marginalia mode for enhanced completion display.
 #+end_src
-* Auto-completion
-#+begin_src emacs-lisp
-  (use-package company
-    :ensure t
-    :hook ((after-init . global-company-mode)
-  	 (lsp-mode . company-mode))
-    :config
-    ;; optional tweaks
-    (setq company-idle-delay 0.2        ;; how quickly completions pop up
-          company-minimum-prefix-length 1
-          company-selection-wrap-around t))
-#+end_src
 
 * Editing enhancements
 
+** Which-key
+Display a pop-up window with candidate keybinds along with their description
 #+begin_src emacs-lisp
 (use-package which-key
   :ensure t
@@ -464,7 +454,9 @@ changes in your buffers.
 #+end_src
 
 * Programming
+
 ** Language Servers
+Eglot bridges external language servers with emacs.
 #+begin_src emacs-lisp
   (use-package eglot)
 #+end_src
@@ -493,14 +485,15 @@ changes in your buffers.
 
 ** Buffer formatting
 
-Use Ruff to automatically format buffer on save.
+Use ruff to automatically format buffer on save.
 
 #+begin_src emacs-lisp
 (add-hook 'python-ts-mode-hook #'ruff-format-on-save-mode)
 #+end_src
 
+Use ruff to fix imports order and remove unused.
 #+begin_src emacs-lisp
-  (defun ll/ruff-fix-imports ()
+  (defun ll/python-ruff-fix-imports ()
     "Fix imports in the current Python buffer using Ruff.
   Never modifies the file on disk."
     (interactive)
@@ -533,33 +526,33 @@ Use Ruff to automatically format buffer on save.
 (add-hook 'python-ts-mode-hook
           (lambda ()
             (add-hook 'before-save-hook
-                      #'ll/ruff-fix-imports
+                      #'ll/python-ruff-fix-imports
                       nil t)))
 #+end_src
+
 ** Breakpoints
 
 Bindings and functions to add and highlight breakpoints.
 #+begin_src emacs-lisp :tangle yes
-(defvar python--pdb-breakpoint-string "breakpoint()")
-(defun ll/python-add-breakpoint ()
-t"Inserts a python breakpoint using `pdb'"
-    (interactive)
-    (back-to-indentation)
-    ;; this preserves the correct indentation in case the line above
-    ;; point is a nested block
-    (split-line)
-    (insert python--pdb-breakpoint-string)
-    (python-set-debug-highlight))
+  (defvar python--pdb-breakpoint-string "breakpoint()")
+  (defun ll/python-add-breakpoint ()
+  "Inserts a python breakpoint using `pdb'"
+      (interactive)
+      (back-to-indentation)
+      ;; this preserves the correct indentation in case the line above
+      ;; point is a nested block
+      (split-line)
+      (insert python--pdb-breakpoint-string)
+      (python-set-debug-highlight))
 
-(defun python-set-debug-highlight ()
-    (interactive)
-    (highlight-lines-matching-regexp "breakpoint[.]?" 'hi-red-b))
-#+end_src
+  (defun python-set-debug-highlight ()
+      (interactive)
+      (highlight-lines-matching-regexp "breakpoint[.]?" 'hi-red-b))
 
-#+begin_src emacs-lisp
-(add-hook 'python-ts-mode-hook
-          (lambda ()
-            (define-key python-ts-mode-map (kbd "<leader> m d") 'll/python-add-breakpoint)))
+  (with-eval-after-load 'python
+  (keymap-set python-ts-mode-map
+              "C-c C-b"
+              #'ll/python-add-breakpoint))
 #+end_src
 
 * Direnv
