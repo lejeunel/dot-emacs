@@ -38,7 +38,11 @@ Change the yes/no prompt to y/n
 #+begin_src emacs-lisp
 (fset 'yes-or-no-p 'y-or-n-p)
 #+end_src
+* Theme
 
+#+begin_src emacs-lisp
+  (load-theme 'modus-vivendi-tinted t)
+#+end_src
 * Elpaca
 #+begin_src emacs-lisp
 (setq elpaca-lock-file (expand-file-name "elpaca-lock.el" user-emacs-directory))
@@ -284,13 +288,6 @@ programming languages.
 #+end_src
 
 ** Theme 
-#+begin_src emacs-lisp
-  (use-package modus-themes
-      :ensure t
-      :init
-      (load-theme 'modus-vivendi-tinted t))
-#+end_src
-
 By default, tree-sitter does not colorize enough to my taste:
 #+begin_src emacs-lisp
   (setq treesit-font-lock-level 4)
