@@ -1,4 +1,4 @@
-#+TITLE: My Emacs Config
+#+title: My Emacs Config
 #+AUTHOR: Laurent Lejeune
 #+PROPERTY: header-args:emacs-lisp :tangle yes :results silent
 #+PROPERTY: header-args :tangle "~/.config/vemacs/config.el" :lexical t
@@ -38,17 +38,29 @@ Change the yes/no prompt to y/n
 #+begin_src emacs-lisp
 (fset 'yes-or-no-p 'y-or-n-p)
 #+end_src
+
 * Theme
 
 #+begin_src emacs-lisp
   (load-theme 'modus-vivendi-tinted t)
 #+end_src
+
+#+begin_src emacs-lisp
+  (set-face-attribute 'default nil
+                      :family "JetBrainsMono Nerd Font"
+                      :height 150)  
+#+end_src
+
 * Elpaca
+
+Set lock file for reproducibility. Use ~elpaca-write-lock-file~ to update the file
+after adding/updating packages.
+
 #+begin_src emacs-lisp
 (setq elpaca-lock-file (expand-file-name "elpaca-lock.el" user-emacs-directory))
 #+end_src
 
-Install Elpaca, our package manager.
+Install it.
 
 #+begin_src emacs-lisp
   (defvar elpaca-installer-version 0.12)
@@ -96,6 +108,11 @@ Install Elpaca, our package manager.
     (elpaca-use-package-mode))
 #+end_src
 
+* Quality of life improvements
+
+Virtually every program out there will delete the selected/highlighted text as soon as the user types something.
+Emacs does not do this by default, even though it has the functionality available.
+
 #+begin_src emacs-lisp
 (use-package delsel
   :ensure nil
@@ -131,6 +148,12 @@ The DWIM behaviour of this command is as follows:
 
 #+end_src
 
+* Dired
+
+#+begin_src emacs-lisp
+(setq dired-dwim-target t)
+#+end_src
+
 * Basic UI tweaks
 #+begin_src emacs-lisp
   (setq inhibit-startup-message t)
@@ -154,11 +177,41 @@ Embark provides a powerful contextual action menu for Emacs, allowing
 you to perform various operations on completion candidates and other items.
 It extends the capabilities of completion frameworks by offering direct
 actions on the candidates.
-Just `<leader> .' over any text, explore it :)
+
 #+begin_src emacs-lisp
 (use-package embark
   :ensure t
-  :defer t)
+
+  :bind
+  (("C-." . embark-act)         ;; pick some comfortable binding
+   ("C-;" . embark-dwim)        ;; good alternative: M-.
+   ("C-h B" . embark-bindings)) ;; alternative for `describe-bindings'
+
+  :init
+
+  ;; Optionally replace the key help with a completing-read interface
+  (setq prefix-help-command #'embark-prefix-help-command)
+
+  ;; Show the Embark target at point via Eldoc. You may adjust the
+  ;; Eldoc strategy, if you want to see the documentation from
+  ;; multiple providers. Beware that using this can be a little
+  ;; jarring since the message shown in the minibuffer can be more
+  ;; than one line, causing the modeline to move up and down:
+
+  ;; (add-hook 'eldoc-documentation-functions #'embark-eldoc-first-target)
+  ;; (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly)
+
+  ;; Add Embark to the mouse context menu. Also enable `context-menu-mode'.
+  ;; (context-menu-mode 1)
+  ;; (add-hook 'context-menu-functions #'embark-context-menu 100)
+
+  :config
+
+  ;; Hide the mode line of the Embark live/completions buffers
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none)))))
 #+end_src
 
 * Embark-Consult
@@ -189,12 +242,48 @@ that Consult commands, like previews, are available when using Embark.
 
   (use-package orderless
     :ensure t
-    :after vertico
-    :custom (completion-styles '(orderless basic)))
+    :after vertico)
 
   (use-package marginalia
     :ensure t
     :init (marginalia-mode))
+#+end_src
+
+* Completion styles
+
+Specify how the minibuffer suggestions are generated based on user-inputs.
+
+*basic*
+    Prefix completion that also accounts for the text after point.
+    Using the above example, this one will consider patterns that match all of emacs22 as well as anything that completes suffix.
+*substring*
+    Matches the given sequence of characters literally regardless of where it is in a word.
+    So pro will match professional as well as reproduce.
+*partial-completion*
+    This is used for file navigation.
+    Instead of typing out a full path like ~/.local/share/fonts, we do ~/.l/s/f or variants thereof to make the matches unique such as ~/.l/sh/fon.
+    It is a joy to navigate the file system in this way.
+    Though it also expands words are substrings.
+*flex*
+    Completion of an in-order subset of characters.
+    It does not matter where the charactes are in the word, so long as they are encountered in the given order.
+    The input lad will thus match list-faces-display as well as pulsar-highlight-dwim.
+*initials*
+    Completion of acronyms and initialisms.
+    Typing lfd will thus match list-faces-display.
+    This completion style can also be used for file system navigation, though I prefer to only have partial-completion handle that task.
+*orderless*
+    This is the only completion style I use which is not built into Emacs.
+    It matches patterns out-of-order.
+    Patterns are typically words separated by spaces, though they can also be regular expressions,
+    and even styles that are the same as the aforementioned flex and initials.
+    
+#+begin_src emacs-lisp
+  (setq completion-styles '(basic substring initials partial-completion flex)) ; also see `completion-category-overrides'
+  (setq completion-flex-nospace t)
+  (setq completion-pcm-leading-wildcard nil) ; Emacs 31
+  (with-eval-after-load 'orderless
+    (setq completion-styles (append completion-styles '(orderless))))
 #+end_src
 
 * Exploring Filesystem
@@ -228,7 +317,7 @@ navigating buffers, files, and xrefs with ease.
           :defer t
           :bind
           (("C-c f" . consult-flymake)
-  	 ("C-x b" . ll/consult-project-or-all-buffers))
+  	 ("C-x b" . consult-buffer))
           :init
           ;; Enhance register preview with thin lines and no mode line.
           (advice-add #'register-preview :override #'consult-register-window)
@@ -238,13 +327,28 @@ navigating buffers, files, and xrefs with ease.
                 xref-show-definitions-function #'consult-xref))
 #+end_src
 
+* Flymake
+
+Enables syntax and error checking.
+
 #+begin_src emacs-lisp
-(defun ll/consult-project-or-all-buffers ()
-  "Use `consult-project-buffer' if in a project, else `consult-buffer'."
-  (interactive)
-  (if (project-current)
-      (consult-project-buffer)
-    (consult-buffer)))
+  (defun ll/flymake-show-project-diagnostics ()
+    (interactive)
+    (flymake-show-project-diagnostics)
+    (when-let* ((window
+                (seq-find
+                 (lambda (w)
+                   (string-prefix-p
+                    "*Flymake diagnostics for "
+                    (buffer-name (window-buffer w))))
+                 (window-list nil 'no-minibuffer))))
+      (select-window window)))
+  
+  (use-package flymake
+        :ensure nil
+        :bind
+        (("C-c e" . ll/flymake-show-project-diagnostics))
+        )
 #+end_src
 
 * Treesitter
@@ -273,18 +377,28 @@ programming languages.
         org-hide-emphasis-markers t))
 #+end_src
 
-* Appearance
-** Font
+* Grep
+
+Integration for RipGrep to search text.
+
 #+begin_src emacs-lisp
-  (set-face-attribute 'default nil
-                      :family "JetBrainsMono Nerd Font"
-                      :height 150)  
+  (use-package rg
+    :ensure t
+    :config
+    (rg-enable-default-bindings))
+  (define-key global-map (kbd "C-x p s") #'rg-project)
 #+end_src
+
+#+begin_src emacs-lisp
+(use-package wgrep
+  :ensure t)
+#+end_src
+* Appearance
 
 ** Line numbers
 #+begin_src emacs-lisp
-  (display-line-numbers-mode)
-  (setq display-line-numbers 'relative)
+  (setq-default display-line-numbers-type 'relative)
+  (global-display-line-numbers-mode)
 #+end_src
 
 ** Theme 
@@ -449,13 +563,30 @@ changes in your buffers.
     ;; This keeps undo history across sessions, stored in a cache directory.
     (setq undo-tree-history-directory-alist '(("." . "~/config/emacs/.cache/undo"))))
 #+end_src
+* Backup
 
+By default, emacs writes a backup prior to saving with naming ~my-file.ext~~ in the
+same directory. I prefer to store these in a separate dedicated directory.
+
+#+begin_src emacs-lisp
+  (setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
+#+end_src
 * Programming
+** Compilation
 
+In compilation mode, place cursor on first error on window switch.
+
+#+begin_src emacs-lisp
+(setq compilation-scroll-output 'first-error)
+#+end_src
 ** Language Servers
 Eglot bridges external language servers with emacs.
 #+begin_src emacs-lisp
-  (use-package eglot)
+    (use-package eglot
+  :ensure nil
+  :bind
+  (:map eglot-mode-map
+        ("C-c r" . eglot-rename)))
 #+end_src
 
 ** Auto-formatting
@@ -468,9 +599,22 @@ Eglot bridges external language servers with emacs.
       :args `("format" "--stdin-filename" ,(or (buffer-file-name) input-file))))
 #+end_src
 
+* Nix
+
+#+begin_src emacs-lisp
+  (use-package nix-mode
+    :ensure t
+    :mode "\\.nix\\'")
+  (add-hook 'nix-mode-hook #'eglot-ensure)
+#+end_src
+
 * Go
 #+begin_src emacs-lisp
   (add-hook 'go-ts-mode-hook #'eglot-ensure)
+  (add-hook 'go-ts-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook
+                        #'eglot-format-buffer nil t)))
 #+end_src
 
 * Python
@@ -566,6 +710,17 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
     :ensure nil  ;; Don't install org from ELPA, use the built-in one
     :config
     (define-key org-mode-map (kbd "<leader> m e") #'org-export-dispatch))
+#+end_src
+
+* Markdown
+
+#+begin_src emacs-lisp
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init (setq markdown-command "multimarkdown")
+  :bind (:map markdown-mode-map
+         ("C-c C-e" . markdown-do)))
 #+end_src
 
 * Window Management
