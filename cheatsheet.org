@@ -1,0 +1,51 @@
+* Vanilla Emacs cheatsheet
+
+~C-k (~ and ~C-k )~ start and end keyboard macro, respectively
+~M-m~ -- ~back-to-identation~ jumps to first non-whitespace
+~M-^~ -- ~delete-indentation~ removes all whitespace at point
+~M-SPC~ -- ~just-one-space~ replace all whitespace at point with one space
+~C-l~ -- ~recenter-top-bottom~
+~M-%~ query replace
+~M-0 C-k~ kill from cursor till beginning of line
+~M-q~ -- ~fill-paragraph~ modifies the selected region to conform to maximum column width
+~M-g M-g~ -- ~goto-line~ move cursor to given line
+~M-g M-c~ -- ~goto-char~ move cursor to given character
+~M-;~ -- ~comment-dwim~ comment or uncomment region
+~M-r~ -- ~move-to-window-line-top-bottom~ move cursor to top/center/bottom of window
+~M-(~ -- ~insert-parentheses~ enclose region whithin parentheses
+~S-M-{f,b}~ select region while moving forward/backward
+~C-x C-x~ -- ~exchange-point-and-mark~ set mark to current point and select
+from previous mark
+
+* Copy-pasting
+
+~C-w~ kill (copy) selection
+~M-w~ copy selection
+~C-y~ yank (paste) selection
+
+* Upcase/downcase
+
+~C-x C-u~ make region upper-case
+~C-x C-l~ make region lower-case
+
+* Jumping around
+
+Hitting ~C-SPC~ sets a mark. This is useful when trying to
+draw a region (e.g. by following with movements). Here, we
+want to make a mark as a location in the buffer we know we
+want to return to later on.
+
+A first option is to set the mark (~C-SPC~), and straight after
+do ~C-g~ to disactivate region selection.
+
+A simpler approach is to disactivate the previous mark by
+typing again ~C-SPC~ again. All together, that means
+we do ~C-SPC~ twice in a row to push a mark in the mark-ring.
+After navigating away from that mark, we return to it
+using ~C-u C-SPC~.
+
+** Register storage
+
+When working with several marks, we can mark a point
+to a named register. To do so type ~C-x r SPC~ and enter
+a letter in the mini-buffer. To jump to it, do ~C-SPC r j~.
