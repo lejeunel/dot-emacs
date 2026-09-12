@@ -377,6 +377,14 @@ programming languages.
         org-hide-emphasis-markers t))
 #+end_src
 
+** HTMLize
+This is used internally by org-mode to produce syntax highlighting in code blocks.
+
+#+begin_src
+  (use-package htmlize
+  :ensure t)
+#+end_src
+
 * Grep
 
 Integration for RipGrep to search text.
