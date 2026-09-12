@@ -1,34 +1,53 @@
 * Vanilla Emacs cheatsheet
 
-~C-k (~ and ~C-k )~ start and end keyboard macro, respectively
+** Motion
+
+~M-g M-g~ -- ~goto-line~ move cursor to given line
+~M-g M-c~ -- ~goto-char~ move cursor to given character
 ~M-m~ -- ~back-to-identation~ jumps to first non-whitespace
+~M-r~ -- ~move-to-window-line-top-bottom~ move cursor to top/center/bottom of window
+~S-M-{f,b}~ select region while moving forward/backward
+~M-{a-e}~ move backward/forward one sentence (depends on context/major-mode)
+
+** Modify
+
 ~M-^~ -- ~delete-indentation~ removes all whitespace at point
 ~M-SPC~ -- ~just-one-space~ replace all whitespace at point with one space
 ~C-l~ -- ~recenter-top-bottom~
 ~M-%~ query replace
 ~M-0 C-k~ kill from cursor till beginning of line
 ~M-q~ -- ~fill-paragraph~ modifies the selected region to conform to maximum column width
-~M-g M-g~ -- ~goto-line~ move cursor to given line
-~M-g M-c~ -- ~goto-char~ move cursor to given character
 ~M-;~ -- ~comment-dwim~ comment or uncomment region
-~M-r~ -- ~move-to-window-line-top-bottom~ move cursor to top/center/bottom of window
 ~M-(~ -- ~insert-parentheses~ enclose region whithin parentheses
-~S-M-{f,b}~ select region while moving forward/backward
+
 ~C-x C-x~ -- ~exchange-point-and-mark~ set mark to current point and select
 from previous mark
 
-* Copy-pasting
+** Repeating commands
+
+~C-x z~ repeat last command, ignores input events, like moving around
+~C-x (~ an ~C-x )~ start and end keyboard macro, respectively
+~C-x e~ call last macro
+
+** copy-pasting
 
 ~C-w~ kill (copy) selection
 ~M-w~ copy selection
 ~C-y~ yank (paste) selection
 
-* Upcase/downcase
+** Upcase/downcase
 
 ~C-x C-u~ make region upper-case
 ~C-x C-l~ make region lower-case
 
-* Jumping around
+** Marking regions
+
+~M-@~ marks from point till end of word
+~M-h~ mark paragraph
+~C-M-h~ mark /defun/ (or function in general)
+~C-x h~ mark whole buffer
+ 
+** Jumping using marks
 
 Hitting ~C-SPC~ sets a mark. This is useful when trying to
 draw a region (e.g. by following with movements). Here, we
@@ -49,3 +68,17 @@ using ~C-u C-SPC~.
 When working with several marks, we can mark a point
 to a named register. To do so type ~C-x r SPC~ and enter
 a letter in the mini-buffer. To jump to it, do ~C-SPC r j~.
+
+** Jumping in compile/grep/rg modes
+
+Certain modes produces outputs that correpond to lines
+in files, e.g. compile-mode show errors to which we
+can jump to with the ~<ENTER>~ key.
+
+When launching a compilation, emacs will produce a new window
+which will not be selected. This requires that we switch to ~C-x 0~,
+select the error/line, and press ~<ENTER>~.
+
+A simpler way is to type ~M-g M-n~ and ~M-g M-p~ to
+move the point to the next and previous /error/, respectively.
+here, /error/ means a line highlighted in the output buffer.
