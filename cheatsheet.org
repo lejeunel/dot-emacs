@@ -2,12 +2,15 @@
 
 ** Motion
 
-~M-g M-g~ -- ~goto-line~ move cursor to given line
-~M-g M-c~ -- ~goto-char~ move cursor to given character
+~M-g g~ -- ~goto-line~ move cursor to given line
+~M-g c~ -- ~goto-char~ move cursor to given character
 ~M-m~ -- ~back-to-identation~ jumps to first non-whitespace
 ~M-r~ -- ~move-to-window-line-top-bottom~ move cursor to top/center/bottom of window
 ~S-M-{f,b}~ select region while moving forward/backward
 ~M-{a-e}~ move backward/forward one sentence (depends on context/major-mode)
+
+~C-M-{f,b}~ move forward/backward symbolic expression
+~C-M-{a,e}~ move forward/backward function
 
 ** Modify
 
@@ -34,6 +37,12 @@ from previous mark
 ~C-w~ kill (copy) selection
 ~M-w~ copy selection
 ~C-y~ yank (paste) selection
+~M-y~ show kill-ring. Opens a fuzzy-search buffer to find copied/killed text
+
+*** Register
+
+~C-x r s r~ copy region into register ~r~
+~C-x r i r~ insert text in register ~r~
 
 ** Upcase/downcase
 
@@ -42,11 +51,18 @@ from previous mark
 
 ** Marking regions
 
-~M-@~ marks from point till end of word
-~M-h~ mark paragraph
-~C-M-h~ mark /defun/ (or function in general)
-~C-x h~ mark whole buffer
- 
+- ~M-@~ marks from point till end of word
+- ~M-h~ mark paragraph
+- ~C-M-h~ mark /defun/ (or function in general)
+- ~C-x h~ mark whole buffer
+- ~C-M-u C-M-SPC~ select closest parentheses-like expression. Combines:
+  - ~backward-up-list~ Place point at start of nearest parentheses-like expression)
+  - ~mark-sexp~ (mark current following expression)
+- ~C-SPC~ marks the start of a "linear region"
+- ~C-x SPC~ marks the start of a rectangle
+- ~C-x C-x~ swap the point (cursor) with the previous mark. Useful to expand the
+  region "both ways".
+
 ** Jumping using marks
 
 Hitting ~C-SPC~ sets a mark. This is useful when trying to
@@ -67,7 +83,7 @@ using ~C-u C-SPC~.
 
 When working with several marks, we can mark a point
 to a named register. To do so type ~C-x r SPC~ and enter
-a letter in the mini-buffer. To jump to it, do ~C-SPC r j~.
+a letter in the mini-buffer. To jump to it, do ~C-x r j~.
 
 ** Jumping in compile/grep/rg modes
 

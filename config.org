@@ -39,7 +39,12 @@ Change the yes/no prompt to y/n
 (fset 'yes-or-no-p 'y-or-n-p)
 #+end_src
 
-* Theme
+Do not generate lock files (these have a ~.#~) pattern
+#+begin_src emacs-lisp
+(setq create-lock-files nil)
+#+end_src
+
+* Theme and Appearance
 
 #+begin_src emacs-lisp
   (load-theme 'modus-vivendi-tinted t)
@@ -49,6 +54,11 @@ Change the yes/no prompt to y/n
   (set-face-attribute 'default nil
                       :family "JetBrainsMono Nerd Font"
                       :height 150)  
+#+end_src
+
+Disable cursor blinking.
+#+begin_src emacs-lisp
+(blink-cursor-mode -1)
 #+end_src
 
 * Elpaca
@@ -116,7 +126,7 @@ Emacs does not do this by default, even though it has the functionality availabl
 #+begin_src emacs-lisp
 (use-package delsel
   :ensure nil
-  :hook (after-init . delete-selection-mode))  
+  :hook (after-init . delete-selection-mode))
 #+end_src
 
 #+begin_src emacs-lisp
