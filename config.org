@@ -173,6 +173,11 @@ The DWIM behaviour of this command is as follows:
   (setq visible-bell nil)
 #+end_src
 
+Make ~scroll-up~ and ~scroll-down~ go all the way up/down.
+#+begin-src emacs-lisp
+(setq scroll-error-top-bottom t)
+#+end_src
+
 * Recentf
 Log and retrieve most recent files
 #+begin_src emacs-lisp
