@@ -8,15 +8,16 @@
 This is my emacs configuration. It is still at a very early stage.
 
 #+begin_src emacs-lisp :tangle "early-init.el"
-;;; early-init.el -*- lexical-binding: t; -*-
-(setq package-enable-at-startup nil)
+  ;;; early-init.el -*- lexical-binding: t; -*-
+  (setq package-enable-at-startup nil)
 
-;;; disable white screen flash on GUI startup
-(setq default-frame-alist '(
-  (background-color . "#000000")
-  (ns-appearance . dark)
-  (ns-transparent-titlebar . t)))
+  ;;; disable white screen flash on GUI startup
+  (setq default-frame-alist '(
+    (background-color . "#000000")
+    (ns-appearance . dark)
+    (ns-transparent-titlebar . t)))
 
+  (setq frame-title-format '("%b"))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -39,9 +40,13 @@ Change the yes/no prompt to y/n
 (fset 'yes-or-no-p 'y-or-n-p)
 #+end_src
 
-Do not generate lock files (these have a ~.#~) pattern
+Do not generate:
+- lock files (these have a ~.#~) pattern
+- backup files
+  
 #+begin_src emacs-lisp
-(setq create-lock-files nil)
+  (setq create-lock-files nil
+        make-backup-files nil)
 #+end_src
 
 * Theme and Appearance
@@ -61,7 +66,7 @@ Disable cursor blinking.
 (blink-cursor-mode -1)
 #+end_src
 
-* Elpaca
+* Elpaca (package manager)
 
 Set lock file for reproducibility. Use ~elpaca-write-lock-file~ to update the file
 after adding/updating packages.
@@ -118,16 +123,16 @@ Install it.
     (elpaca-use-package-mode))
 #+end_src
 
-* Quality of life improvements
+* Disable native compilation warnings
 
-Virtually every program out there will delete the selected/highlighted text as soon as the user types something.
-Emacs does not do this by default, even though it has the functionality available.
+Native compilation warnings are redirected to the /warning/ buffer
+but without popping-up.
 
 #+begin_src emacs-lisp
-(use-package delsel
-  :ensure nil
-  :hook (after-init . delete-selection-mode))
+  (setq native-comp-async-report-warnings-errors 'silent)
 #+end_src
+
+* Quality of life improvements
 
 #+begin_src emacs-lisp
 (defun ll/keyboard-quit-dwim ()
@@ -158,6 +163,17 @@ The DWIM behaviour of this command is as follows:
 
 #+end_src
 
+** Rainbow-mode
+
+Displays parentheses groups with distinct colors.
+
+#+begin_src emacs-lisp
+  (use-package rainbow-delimiters
+    :ensure t
+    :config
+    (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+#+end_src
+
 * Dired
 
 #+begin_src emacs-lisp
@@ -174,7 +190,8 @@ The DWIM behaviour of this command is as follows:
 #+end_src
 
 Make ~scroll-up~ and ~scroll-down~ go all the way up/down.
-#+begin-src emacs-lisp
+
+#+begin_src emacs-lisp
 (setq scroll-error-top-bottom t)
 #+end_src
 
@@ -185,6 +202,23 @@ Log and retrieve most recent files
   :init
   (recentf-mode 1)
   (setq recentf-max-menu-items 50))  ;; adjust the number of recent files
+#+end_src
+
+* Man-mode
+
+Display man-pages.
+
+#+begin_src emacs-lisp
+  (use-package man
+    :ensure nil
+    :config
+    (require 'ansi-osc)
+    
+    ;; When man pages contain links, these are not displayed properly by emacs.
+    (add-hook 'Man-cooked-hook
+              (lambda ()
+                (let ((inhibit-read-only t))
+                  (ansi-osc-apply-on-region (point-min) (point-max))))))
 #+end_src
 
 * Embark
@@ -229,7 +263,7 @@ actions on the candidates.
                  (window-parameters (mode-line-format . none)))))
 #+end_src
 
-* Embark-Consult
+** Embark-Consult
 
 Embark-Consult provides a bridge between Embark and Consult, ensuring
 that Consult commands, like previews, are available when using Embark.
@@ -241,6 +275,7 @@ that Consult commands, like previews, are available when using Embark.
 #+end_src
 
 * Magit
+
 #+begin_src emacs-lisp
   (use-package magit
     :ensure t
@@ -248,6 +283,7 @@ that Consult commands, like previews, are available when using Embark.
 #+end_src
 
 * Minibuffer search
+
 #+begin_src emacs-lisp
   ;; Example packages managed by Elpaca
 
@@ -262,6 +298,16 @@ that Consult commands, like previews, are available when using Embark.
   (use-package marginalia
     :ensure t
     :init (marginalia-mode))
+#+end_src
+
+* completion-preview-mode
+
+Inhibit the completion preview generation to
+relieve the CPU while typing. The default value here
+induces important overhead on projects where there are many candidates:
+
+#+begin_src emacs-lisp
+(setq completion-preview-idle-delay 0.3)
 #+end_src
 
 * Completion styles
@@ -327,19 +373,26 @@ features like previews and enhanced register management. It's useful for
 navigating buffers, files, and xrefs with ease.
 
 #+begin_src emacs-lisp
-    (use-package consult
-          :ensure t
-          :defer t
-          :bind
-          (("C-c f" . consult-flymake)
-  	 ("C-x b" . consult-buffer))
-          :init
-          ;; Enhance register preview with thin lines and no mode line.
-          (advice-add #'register-preview :override #'consult-register-window)
+  (use-package consult
+        :ensure t
+        :defer t
+        :bind
+        (("C-x c e" . consult-flymake)
+         ("C-x c m" . consult-mark)
+         ("C-x b" . consult-buffer))
+        :init
+        ;; Enhance register preview with thin lines and no mode line.
+        (advice-add #'register-preview :override #'consult-register-window)
 
-          ;; Use Consult for xref locations with a preview feature.
-          (setq xref-show-xrefs-function #'consult-xref
-                xref-show-definitions-function #'consult-xref))
+        ;; Use Consult for xref locations with a preview feature.
+        (setq xref-show-xrefs-function #'consult-xref
+              xref-show-definitions-function #'consult-xref))
+#+end_src
+
+** consult-imenu
+
+#+begin_src emacs-lisp
+(global-set-key (kbd "M-g i") #'consult-imenu)
 #+end_src
 
 * Flymake
@@ -385,11 +438,12 @@ programming languages.
 
 * Org Mode setup
 #+begin_src emacs-lisp
-(use-package org
-  :ensure nil
-  :config
-  (setq org-startup-indented t
-        org-hide-emphasis-markers t))
+  (use-package org
+    :ensure nil
+    :config
+    (setq org-startup-indented t
+          org-hide-emphasis-markers t
+          org-support-shift-select t))
 #+end_src
 
 ** HTMLize
@@ -409,7 +463,7 @@ Integration for RipGrep to search text.
     :ensure t
     :config
     (rg-enable-default-bindings))
-  (define-key global-map (kbd "C-x p s") #'rg-project)
+  (define-key global-map (kbd "C-x p s") #'consult-ripgrep)
 #+end_src
 
 #+begin_src emacs-lisp
@@ -430,9 +484,54 @@ By default, tree-sitter does not colorize enough to my taste:
   (setq treesit-font-lock-level 4)
 #+end_src
 
+* Navigation
+
+** Move to the beginning of line
+
+Alternates between ~back-to-indentation~ which moves to the first non-blank character of a line,
+to ~beginning-of-line~ whichs moves to first character.
+
+#+begin_src emacs-lisp
+(defun ll/smarter-move-beginning-of-line (arg)
+  "Move point back to indentation of beginning of line.
+
+        Move point to the first non-whitespace character on this line.
+        If point is already there, move to the beginning of the line.
+        Effectively toggle between the first non-whitespace character and
+        the beginning of the line.
+
+        If ARG is not nil or 1, move forward ARG - 1 lines first.  If
+        point reaches the beginning or end of the buffer, stop there."
+  (interactive "^p")
+  (setq arg (or arg 1))
+
+  ;; Move lines first
+  (when (/= arg 1)
+    (let ((line-move-visual nil))
+      (forward-line (1- arg))))
+
+  (let ((orig-point (point)))
+    (back-to-indentation)
+    (when (= orig-point (point))
+      (move-beginning-of-line 1))))
+#+end_src
+
+#+begin_src emacs-lisp
+  (global-set-key [remap move-beginning-of-line]
+                  'll/smarter-move-beginning-of-line)
+#+end_src
+
 ** isearch
+
 #+begin_src emacs-lisp
   (setq isearch-lazy-count t)
+#+end_src
+
+Treat isearch space as a wildcard.
+#+begin_src emacs-lisp
+  (setq search-whitespace-regexp ".*?")
+  (setq isearch-lax-whitespace t)
+  (setq isearch-regexp-lax-whitespace nil)
 #+end_src
 
 ** Auto-complete
@@ -586,6 +685,7 @@ changes in your buffers.
     ;; This keeps undo history across sessions, stored in a cache directory.
     (setq undo-tree-history-directory-alist '(("." . "~/config/emacs/.cache/undo"))))
 #+end_src
+
 * Backup
 
 By default, emacs writes a backup prior to saving with naming ~my-file.ext~~ in the
@@ -594,7 +694,17 @@ same directory. I prefer to store these in a separate dedicated directory.
 #+begin_src emacs-lisp
   (setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
 #+end_src
+
+* Expand-region
+
+#+begin_src emacs-lisp
+  (use-package expand-region
+    :ensure t
+    :bind ("C-=" . er/expand-region))
+#+end_src
+
 * Programming
+
 ** Compilation
 
 In compilation mode, place cursor on first error on window switch.
@@ -602,6 +712,7 @@ In compilation mode, place cursor on first error on window switch.
 #+begin_src emacs-lisp
 (setq compilation-scroll-output 'first-error)
 #+end_src
+
 ** Language Servers
 Eglot bridges external language servers with emacs.
 #+begin_src emacs-lisp
@@ -622,7 +733,7 @@ Eglot bridges external language servers with emacs.
       :args `("format" "--stdin-filename" ,(or (buffer-file-name) input-file))))
 #+end_src
 
-* Nix
+** Nix
 
 #+begin_src emacs-lisp
   (use-package nix-mode
@@ -631,7 +742,7 @@ Eglot bridges external language servers with emacs.
   (add-hook 'nix-mode-hook #'eglot-ensure)
 #+end_src
 
-* Go
+** Go
 #+begin_src emacs-lisp
   (add-hook 'go-ts-mode-hook #'eglot-ensure)
   (add-hook 'go-ts-mode-hook
@@ -640,14 +751,14 @@ Eglot bridges external language servers with emacs.
                         #'eglot-format-buffer nil t)))
 #+end_src
 
-* Python
+** Python
 
-** Eglot
+*** Eglot
 #+begin_src emacs-lisp
   (add-hook 'python-ts-mode-hook #'eglot-ensure)
 #+end_src
 
-** Buffer formatting
+*** Buffer formatting
 
 Use ruff to automatically format buffer on save.
 
@@ -694,7 +805,7 @@ Use ruff to fix imports order and remove unused.
                       nil t)))
 #+end_src
 
-** Breakpoints
+*** Breakpoints
 
 Bindings and functions to add and highlight breakpoints.
 #+begin_src emacs-lisp :tangle yes
@@ -759,3 +870,27 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
 #+end_src
 
 
+* TODO Ghostel
+
+#+begin_src emacs-lisp
+  (use-package ghostel
+    :ensure t
+    :bind (("C-x m" . ghostel)
+           :map ghostel-semi-char-mode-map
+           ("C-s"  . consult-line)
+           ("M-<backspace>" . ghostel-backward-kill-word)
+           :map project-prefix-map
+           ("m" . ghostel-project)
+           ("M" . ghostel-project-list-buffers))
+    :config
+    (defun ghostel-send-C-k-and-kill ()
+      "Send `C-k' to ghostel.
+  Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
+      (interactive)
+      (kill-ring-save (point) (line-end-position))
+      (ghostel-send-key "k" "ctrl"))
+
+    (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
+    (add-to-list 'project-switch-commands '(ghostel-project-list-buffers "Ghostel buffers") t)
+    (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer)))
+#+end_src
