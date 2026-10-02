@@ -26,6 +26,41 @@
 ~C-x C-x~ -- ~exchange-point-and-mark~ set mark to current point and select
 from previous mark
 
+** Explore sections/definitions of current buffer with ~imenu~
+
+Open ~imenu~ with ~M-g i~ and scroll through the
+detected paragraphs/sections/function of current buffer.
+
+** Go to definition
+
+- ~M-.~ (~xref-find-defitions~) jumps to the definition of
+  item at point (class, function, variable, ...)
+- ~M-,~ (~xref-go-back~) jumps back to location before invocation
+
+** search, jump-to, and replace with ~consult-ripgrep~
+
+Run ~consult-ripgrep~ to search the current project, or
+a specified directory. View results in the mini-buffer.
+
+This mini-buffer can be acted upon using ~embark-consult~.
+Invoke ~embark-act~ with ~C-.~ and choose ~embark-export~ to
+open the results in a separate grep buffer.
+
+The buffer can be made editable with
+~C-c C-p~ (~wgrep-change-to-wgrep-mode~).
+
+Once changes have been made, ~C-x C-s~
+applies changes to the files.
+
+*** Specify custom path
+
+Use the prefix key to specify the search path: ~C-u C-x p s~.
+
+** Insert text at multiple locations
+
+To insert text on several lines at the same row, draw a zero-width
+rectangle with ~C-x SPC~ and do ~C-x r t~ (~string-rectangle~).
+
 ** Repeating commands
 
 ~C-x z~ repeat last command, ignores input events, like moving around
@@ -63,6 +98,7 @@ from previous mark
 - ~C-x C-x~ swap the point (cursor) with the previous mark. Useful to expand the
   region "both ways".
 
+  
 ** Jumping using marks
 
 Hitting ~C-SPC~ sets a mark. This is useful when trying to
@@ -78,6 +114,8 @@ typing again ~C-SPC~ again. All together, that means
 we do ~C-SPC~ twice in a row to push a mark in the mark-ring.
 After navigating away from that mark, we return to it
 using ~C-u C-SPC~.
+
+- ~C-x c m~ runs ~consult-mark~ to preview marks
 
 ** Register storage
 
@@ -98,3 +136,21 @@ select the error/line, and press ~<ENTER>~.
 A simpler way is to type ~M-g M-n~ and ~M-g M-p~ to
 move the point to the next and previous /error/, respectively.
 here, /error/ means a line highlighted in the output buffer.
+
+			}),
+			Span(Class("flex items-center gap-2"),
+				Button(Type("submit"),
+					Text("Submit"),
+					Class(st.SuccessButton)),
+				Button(
+					Type("button"),
+					Text("Cancel"),
+					Class(st.AbortButton),
+					Attr(
+						`hx-on:click`,
+						fmt.Sprintf(`document.getElementById('%v').innerHTML=''`, b.containerId),
+					),
+				),
+			),
+		))
+}
