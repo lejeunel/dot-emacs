@@ -92,6 +92,13 @@ Disable cursor blinking.
 (blink-cursor-mode -1)
 #+end_src
 
+Disable full frame redraw on screen centering (~C-l~).
+This induces an inconvenient "blink" in the terminal
+
+#+begin_src emacs-lisp
+(setq recenter-redisplay nil)
+#+end_src
+
 * Elpaca (package manager)
 
 Set lock file for reproducibility. Use ~elpaca-write-lock-file~ to update the file
