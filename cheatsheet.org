@@ -12,6 +12,9 @@
 ~C-M-{f,b}~ move forward/backward symbolic expression
 ~C-M-{a,e}~ move forward/backward function
 
+~C-{number} <motion>~ applies motion ~number~ times, e.g.
+    ~C-8 <up>~ moves 8 lines upwards
+
 ** Modify
 
 ~M-^~ -- ~delete-indentation~ removes all whitespace at point
@@ -25,6 +28,11 @@
 
 ~C-x C-x~ -- ~exchange-point-and-mark~ set mark to current point and select
 from previous mark
+
+** Indent
+
+Select a region and type ~C-x C-i~. Next, use ~left/right~ or
+~S-left/S-right~ to indent region.
 
 ** Explore sections/definitions of current buffer with ~imenu~
 
@@ -56,6 +64,14 @@ applies changes to the files.
 
 Use the prefix key to specify the search path: ~C-u C-x p s~.
 
+** Bookmark
+
+Save a location in a file and assign it a name with
+~C-x r m~. To jump to it do ~C-x r b~.
+
+The bookmarks can also be accessed through the ~consult-buffer~
+menu (~C-x b~).
+
 ** Insert text at multiple locations
 
 To insert text on several lines at the same row, draw a zero-width
@@ -67,12 +83,25 @@ rectangle with ~C-x SPC~ and do ~C-x r t~ (~string-rectangle~).
 ~C-x (~ an ~C-x )~ start and end keyboard macro, respectively
 ~C-x e~ call last macro
 
-** copy-pasting
+** Killing / Copying / Yanking
 
 ~C-w~ kill (copy) selection
 ~M-w~ copy selection
 ~C-y~ yank (paste) selection
 ~M-y~ show kill-ring. Opens a fuzzy-search buffer to find copied/killed text
+
+*** Word
+~M-d~ kills from point until end of word (~kill-word~)
+~C-<backspace>~~ kills from point until beginning of word (~backward-kill-word~)
+
+*** Sentence
+~M-k~ kills from point until end of sentence (~kill-sentence~)
+~C-x- DEL~ kills from point until beginning of sentence (~backward-kill-sentence~)
+
+*** Line
+~C-k~ kills from point until end of line (~kill-line~)
+~C-u 0 C-k~ kills from point until beginning of line
+~C-S-<backspace>~ kills the whole line where point is placed (~kill-whole-line~)
 
 *** Register
 
@@ -137,20 +166,38 @@ A simpler way is to type ~M-g M-n~ and ~M-g M-p~ to
 move the point to the next and previous /error/, respectively.
 here, /error/ means a line highlighted in the output buffer.
 
-			}),
-			Span(Class("flex items-center gap-2"),
-				Button(Type("submit"),
-					Text("Submit"),
-					Class(st.SuccessButton)),
-				Button(
-					Type("button"),
-					Text("Cancel"),
-					Class(st.AbortButton),
-					Attr(
-						`hx-on:click`,
-						fmt.Sprintf(`document.getElementById('%v').innerHTML=''`, b.containerId),
-					),
-				),
-			),
-		))
-}
+** Undo
+
+Aside from regular undo called with ~C-/~, one may select a region and
+the undo operations will only apply to that region.
+
+** Registers
+
+Registers are used to store text, numbers, positions, and more.
+Use prefix ~C-x r~.
+
+A preview buffer of all registers can be displayed with
+~M-x view-register~.
+
+*** String
+
+Copy selected *string* with ~C-x r s~ and yank it with
+~C-x r i~
+
+*** Position (in a text buffer)
+
+To save a position in a buffer and return to it later,
+use ~C-x r SPC~ to push point position in register.
+Next, use ~C-x r j~ to *jump* back to it.
+
+*** Number
+
+Initialize a number (integer) with value 0 using
+~C-x r n~ and increment it with ~C-x r +~.
+
+Set an initial value with universal argument: ~C-u 42 C-x r n~.
+Increment by 5 with ~C-u 5 C-x r +~
+
+This is useful when recording macros where each execution needs
+to increment a number, i.e. we may record a macro that increment
+a register.

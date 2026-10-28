@@ -1,17 +1,47 @@
 #+title: My Emacs Config
 #+AUTHOR: Laurent Lejeune
 #+PROPERTY: header-args:emacs-lisp :tangle yes :results silent
-#+PROPERTY: header-args :tangle "~/.config/vemacs/config.el" :lexical t
+#+PROPERTY: header-args :tangle "./config.el" :lexical t
 
-* Introduction
+* Lexical binding
 
-This is my emacs configuration. It is still at a very early stage.
+#+begin_src emacs-lisp
+  ;;; config.el -*- lexical-binding: t; -*-
+#+end_src
+
+* Custom variables
+** Bibliography directories and files
+
+#+begin_src emacs-lisp
+  (defcustom ll/bibliography-main-bibtex-file (expand-file-name "~/Dropbox/org/bibliography/bibs/refs.bib")
+    "Path to main BibTeX file"
+    :type 'file)
+
+  (defcustom ll/bibliography-pdf-dir (expand-file-name "~/Dropbox/org/bibliography/files")
+    "Root directory of PDF files referenced from bibliography"
+    :type 'directory)
+  
+  (defcustom ll/bibliography-notes-dirs (list (expand-file-name "~/Dropbox/org/bibliography/notes/"))
+    "List of directories containing bibliography notes.
+  `citar-notes-paths' expects directories, not files: citar discovers
+  notes named `<citekey>.org' inside them, and
+  `citar-org-format-note-default' creates new ones there."
+    :type '(repeat directory))
+#+end_src
+
+* ~early-init.el~
 
 #+begin_src emacs-lisp :tangle "early-init.el"
   ;;; early-init.el -*- lexical-binding: t; -*-
-  (setq package-enable-at-startup nil)
+#+end_src
 
-  ;;; disable white screen flash on GUI startup
+Disable ~package.el~ since we use ~elpaca~.
+#+begin_src emacs-lisp :tangle "early-init.el"
+  (setq package-enable-at-startup nil)
+#+end_src
+
+Disable white screen flash on GUI startup and set window title.
+ #+begin_src emacs-lisp :tangle "early-init.el"
   (setq default-frame-alist '(
     (background-color . "#000000")
     (ns-appearance . dark)
@@ -20,11 +50,7 @@ This is my emacs configuration. It is still at a very early stage.
   (setq frame-title-format '("%b"))
 #+end_src
 
-#+begin_src emacs-lisp
-;;; config.el -*- lexical-binding: t; -*-
-#+end_src
-
-* Custom Variables
+* Global custom variables
 
 #+begin_src emacs-lisp
   (defcustom ll/use-nerd-fonts t
@@ -57,8 +83,8 @@ Do not generate:
 
 #+begin_src emacs-lisp
   (set-face-attribute 'default nil
-                      :family "JetBrainsMono Nerd Font"
-                      :height 150)  
+                      :family "Aporetic Sans Mono"
+                      :height 170)
 #+end_src
 
 Disable cursor blinking.
@@ -163,7 +189,26 @@ The DWIM behaviour of this command is as follows:
 
 #+end_src
 
-** Rainbow-mode
+* Open file with
+
+#+begin_src emacs-lisp
+(defun ll/open-withq (arg)
+  "Open visited file in default external program.
+
+        With a prefix ARG always prompt for command to use."
+  (interactive "P")
+  (when buffer-file-name
+    (shell-command (concat
+                    (cond
+                     ((and (not arg) (eq system-type 'darwin)) "open")
+                     ((and (not arg) (member system-type '(gnu gnu/linux gnu/kfreebsd))) "xdg-open")
+                     (t (read-shell-command "Open current file with: ")))
+                    " "
+                    (shell-quote-argument buffer-file-name)))))
+
+#+end_src
+
+* Rainbow-mode
 
 Displays parentheses groups with distinct colors.
 
@@ -193,6 +238,18 @@ Make ~scroll-up~ and ~scroll-down~ go all the way up/down.
 
 #+begin_src emacs-lisp
 (setq scroll-error-top-bottom t)
+#+end_src
+
+* Terminal keyboard protocol
+Terminals don't normally send keys like ~C-<number>~, ~C-;~ or ~C-,~.
+~kkp~ turns on the Kitty Keyboard Protocol (which Alacritty supports) in
+~emacs -nw~, so these keys work the same way as in the GUI.
+
+#+begin_src emacs-lisp
+(use-package kkp
+  :ensure t
+  :config
+  (global-kkp-mode 1))
 #+end_src
 
 * Recentf
@@ -275,18 +332,19 @@ that Consult commands, like previews, are available when using Embark.
 #+end_src
 
 * Magit
-
 #+begin_src emacs-lisp
   (use-package magit
     :ensure t
     :defer t)
 #+end_src
 
-* Minibuffer search
+* Minibuffer searching, narrowing and documentation
+
+I use ~vertico~ for minibuffer completion,
+complemented by ~marginalia~ to display short documentation alongside
+available options, and ~orderless~ to fuzzy search.
 
 #+begin_src emacs-lisp
-  ;; Example packages managed by Elpaca
-
   (use-package vertico
     :ensure t
     :init (vertico-mode))
@@ -437,6 +495,7 @@ programming languages.
 #+end_src
 
 * Org Mode setup
+
 #+begin_src emacs-lisp
   (use-package org
     :ensure nil
@@ -446,12 +505,13 @@ programming languages.
           org-support-shift-select t))
 #+end_src
 
-** HTMLize
-This is used internally by org-mode to produce syntax highlighting in code blocks.
+* Org-capture
 
-#+begin_src
-  (use-package htmlize
-  :ensure t)
+#+begin_src emacs-lisp
+ (use-package org-capture
+  :ensure nil
+  :config
+  (define-key global-map (kbd "C-x c c") #'org-capture))
 #+end_src
 
 * Grep
@@ -743,12 +803,18 @@ Eglot bridges external language servers with emacs.
 #+end_src
 
 ** Go
+Auto-format buffer on save.
 #+begin_src emacs-lisp
   (add-hook 'go-ts-mode-hook #'eglot-ensure)
   (add-hook 'go-ts-mode-hook
             (lambda ()
               (add-hook 'before-save-hook
                         #'eglot-format-buffer nil t)))
+#+end_src
+
+Treat CamelCase as two words when using word motions.
+#+begin_src emacs-lisp
+  (add-hook 'go-ts-mode-hook #'subword-mode)
 #+end_src
 
 ** Python
@@ -870,7 +936,7 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
 #+end_src
 
 
-* TODO Ghostel
+* Ghostel
 
 #+begin_src emacs-lisp
   (use-package ghostel
@@ -893,4 +959,35 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
     (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
     (add-to-list 'project-switch-commands '(ghostel-project-list-buffers "Ghostel buffers") t)
     (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer)))
+#+end_src
+
+* Citar
+
+Manage citations, PDFs, and inject citations in org and latex documents.
+
+#+begin_src emacs-lisp
+  (use-package citar
+    :ensure t
+    :custom
+    (citar-bibliography (list ll/bibliography-main-bibtex-file))
+    (citar-library-paths (list ll/bibliography-pdf-dir))
+    (citar-notes-paths ll/bibliography-notes-dirs)
+    (citar-file-open-functions '(
+  			       ("pdf" . citar-file-open-external)
+  			       ("html" . citar-file-open-external)))
+    :hook
+    (LaTeX-mode . citar-capf-setup)
+    (org-mode . citar-capf-setup))
+#+end_src
+
+** With Embark
+
+Add contextual actions to minibuffer to open bibtex entry and pdf file.
+
+#+begin_src emacs-lisp
+  (use-package citar-embark
+    :ensure t
+    :after (citar embark)
+    :no-require
+    :config (citar-embark-mode))
 #+end_src
