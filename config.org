@@ -9,8 +9,6 @@
   ;;; config.el -*- lexical-binding: t; -*-
 #+end_src
 
-
-
 * Custom variables
 ** Main org directory
 
