@@ -10,6 +10,14 @@
 #+end_src
 
 * Custom variables
+** Main org directory
+
+#+begin_src emacs-lisp
+  (defcustom ll/org-root-dir (expand-file-name "~/Dropbox/org/")
+    "Path to root org directory"
+    :type 'file)
+#+end_src
+
 ** Bibliography directories and files
 
 #+begin_src emacs-lisp
@@ -515,10 +523,16 @@ programming languages.
 * Org-capture
 
 #+begin_src emacs-lisp
- (use-package org-capture
-  :ensure nil
-  :config
-  (define-key global-map (kbd "C-x c c") #'org-capture))
+  (use-package org-capture
+   :ensure nil
+   :config
+   (define-key global-map (kbd "C-x c c") #'org-capture)
+   (setq org-capture-templates
+         `(("m" "Meeting" entry
+            (file+headline ,(concat ll/org-root-dir "meetings.org") "Meetings")
+            "* %^U %^{Participants}\n%?"
+            :empty-lines 1)))
+   )
 #+end_src
 
 * Grep
