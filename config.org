@@ -110,6 +110,15 @@ This induces an inconvenient "blink" in the terminal
 (setq recenter-redisplay nil)
 #+end_src
 
+Show white-spaces as greyed-out placeholder characters
+
+#+begin_src emacs-lisp
+(use-package whitespace
+  :ensure nil
+  :config
+  (setq whitespace-style '(face spaces space-mark tabs tab-mark)))
+#+end_src
+
 * Elpaca (package manager)
 
 Set lock file for reproducibility. Use ~elpaca-write-lock-file~ to update the file
@@ -799,8 +808,10 @@ In compilation mode, place cursor on first error on window switch.
 ** Language Servers
 Eglot bridges external language servers with emacs.
 #+begin_src emacs-lisp
-    (use-package eglot
+ (use-package eglot
   :ensure nil
+  :config
+  (add-to-list 'eglot-ignored-server-capabilities :inlayHintProvider)
   :bind
   (:map eglot-mode-map
         ("C-c r" . eglot-rename)))
@@ -856,6 +867,11 @@ Treat CamelCase as two words when using word motions.
 *** Eglot
 #+begin_src emacs-lisp
   (add-hook 'python-ts-mode-hook #'eglot-ensure)
+#+end_src
+
+*** Show whitespaces
+#+begin_src emacs-lisp
+;  (add-hook 'python-ts-mode-hook #'whitespace-mode)
 #+end_src
 
 *** Buffer formatting
