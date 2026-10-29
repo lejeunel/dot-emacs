@@ -10,6 +10,7 @@
 #+end_src
 
 * Custom variables
+
 ** Main org directory
 
 #+begin_src emacs-lisp
@@ -48,18 +49,12 @@ Disable ~package.el~ since we use ~elpaca~.
   (setq package-enable-at-startup nil)
 #+end_src
 
-Disable white screen flash on GUI startup and set window title.
+Override white screen flash on GUI startup and set window title.
  #+begin_src emacs-lisp :tangle "early-init.el"
 (when initial-window-system
   (push '(background-color . "#000000") default-frame-alist))
-
   (setq frame-title-format '("%b"))
 #+end_src
-
-#+begin_src emacs-lisp :tangle "early-init.el"
-(setq xterm-extra-capabilities '(modifyOtherKeys getSelection setSelection))
-#+end_src
-
  
 * Global custom variables
 
@@ -286,6 +281,52 @@ Log and retrieve most recent files
   :init
   (recentf-mode 1)
   (setq recentf-max-menu-items 50))  ;; adjust the number of recent files
+#+end_src
+
+* Drag-Stuff
+
+Move selected regions with ~M-<arrow-key>~.
+
+#+begin_src emacs-lisp
+  (use-package drag-stuff
+    :ensure t
+    :config
+    (drag-stuff-define-keys)
+    :init
+    (drag-stuff-global-mode 1))
+#+end_src
+
+* Corfu (auto-complete)
+
+#+begin_src emacs-lisp
+  (use-package corfu
+    :ensure t
+    ;; Optional customizations
+    ;; :custom
+    ;; (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+    ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
+    ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+    ;; (corfu-preview-current nil)    ;; Disable current candidate preview
+    ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
+    ;; (corfu-on-exact-match 'insert) ;; Configure handling of exact matches
+
+    ;; Enable Corfu only for certain modes. See also `global-corfu-modes'.
+    ;; :hook ((prog-mode . corfu-mode)
+    ;;        (shell-mode . corfu-mode)
+    ;;        (eshell-mode . corfu-mode))
+
+    :init
+
+    ;; Recommended: Enable Corfu globally.  Recommended since many modes provide
+    ;; Capfs and Dabbrev can be used globally (M-/).  See also the customization
+    ;; variable `global-corfu-modes' to exclude certain modes.
+    (global-corfu-mode)
+
+    ;; Enable optional extension modes:
+    ;; (corfu-history-mode)
+    ;; (corfu-mouse-mode)
+    ;; (corfu-popupinfo-mode)
+    )
 #+end_src
 
 * Man-mode
@@ -1006,8 +1047,6 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
       (kill-ring-save (point) (line-end-position))
       (ghostel-send-key "k" "ctrl"))
 
-    (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
-    (add-to-list 'project-switch-commands '(ghostel-project-list-buffers "Ghostel buffers") t)
     (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer)))
 #+end_src
 

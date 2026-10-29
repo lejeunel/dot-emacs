@@ -29,6 +29,10 @@
 ~C-x C-x~ -- ~exchange-point-and-mark~ set mark to current point and select
 from previous mark
 
+** Drag-Stuff (external package)
+
+Select a region and ~M-<arrow-key>~ to move region around.
+
 ** Indent
 
 Select a region and type ~C-x C-i~. Next, use ~left/right~ or
@@ -76,6 +80,14 @@ menu (~C-x b~).
 
 To insert text on several lines at the same row, draw a zero-width
 rectangle with ~C-x SPC~ and do ~C-x r t~ (~string-rectangle~).
+
+** Yank and copy a rectangular region
+
+Activate rectangle section with ~C-x SPC~, draw the region,
+and run ~copy-rectangle-as-kill~ (~C-x r y~), to copy the region in the kill-ring.
+
+Place point at top-right corner where you want to paste it and run
+~yank-rectangle~ (~C-x r y~).
 
 ** Repeating commands
 
