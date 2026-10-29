@@ -2,9 +2,9 @@
 
 (setq package-enable-at-startup nil)
 
-(setq default-frame-alist '(
-  (background-color . "#000000")
-  (ns-appearance . dark)
-  (ns-transparent-titlebar . t)))
+(when initial-window-system
+  (push '(background-color . "#000000") default-frame-alist))
 
-(setq frame-title-format '("%b"))
+  (setq frame-title-format '("%b"))
+
+(setq xterm-extra-capabilities '(modifyOtherKeys getSelection setSelection))
