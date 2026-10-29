@@ -41,7 +41,7 @@ detected paragraphs/sections/function of current buffer.
 
 ** Go to definition
 
-- ~M-.~ (~xref-find-defitions~) jumps to the definition of
+- ~M-.~ (~xref-find-definitions~) jumps to the definition of
   item at point (class, function, variable, ...)
 - ~M-,~ (~xref-go-back~) jumps back to location before invocation
 

@@ -790,6 +790,17 @@ Eglot bridges external language servers with emacs.
         ("C-c r" . eglot-rename)))
 #+end_src
 
+** Trusted-content
+
+Flymake, which performs on-the-fly syntax-checking and highlights
+text, might run code contained in buffer and induce security risks.
+Add here, paths to directories/files we consider "safe".
+
+#+begin_src emacs-lisp
+(setq trusted-content '("~/code/"))
+#+end_src
+
+
 ** Auto-formatting
 #+begin_src emacs-lisp
   (use-package reformatter
