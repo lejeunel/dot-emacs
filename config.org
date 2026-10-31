@@ -894,6 +894,12 @@ Treat CamelCase as two words when using word motions.
 ;  (add-hook 'python-ts-mode-hook #'whitespace-mode)
 #+end_src
 
+*** Subword navigation
+Treat CamelCase as two words when using word motions.
+#+begin_src emacs-lisp
+  (add-hook 'python-ts-mode-hook #'subword-mode)
+#+end_src
+
 *** Buffer formatting
 
 Use ruff to automatically format buffer on save.
@@ -950,9 +956,6 @@ Bindings and functions to add and highlight breakpoints.
   "Inserts a python breakpoint using `pdb'"
       (interactive)
       (back-to-indentation)
-      ;; this preserves the correct indentation in case the line above
-      ;; point is a nested block
-      (split-line)
       (insert python--pdb-breakpoint-string)
       (python-set-debug-highlight))
 
