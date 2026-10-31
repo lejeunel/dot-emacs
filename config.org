@@ -90,7 +90,7 @@ Do not generate:
 #+begin_src emacs-lisp
   (set-face-attribute 'default nil
                       :family "Aporetic Sans Mono"
-                      :height 170)
+                      :height 190)
 #+end_src
 
 Disable cursor blinking.
@@ -301,8 +301,6 @@ Move selected regions with ~M-<arrow-key>~.
 #+begin_src emacs-lisp
   (use-package corfu
     :ensure t
-    :custom
-    (corfu-auto t)                    ;; Pop up candidates while typing
     :init
     (global-corfu-mode)
     (corfu-popupinfo-mode))
@@ -359,19 +357,6 @@ actions on the candidates.
 
   ;; Optionally replace the key help with a completing-read interface
   (setq prefix-help-command #'embark-prefix-help-command)
-
-  ;; Show the Embark target at point via Eldoc. You may adjust the
-  ;; Eldoc strategy, if you want to see the documentation from
-  ;; multiple providers. Beware that using this can be a little
-  ;; jarring since the message shown in the minibuffer can be more
-  ;; than one line, causing the modeline to move up and down:
-
-  ;; (add-hook 'eldoc-documentation-functions #'embark-eldoc-first-target)
-  ;; (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly)
-
-  ;; Add Embark to the mouse context menu. Also enable `context-menu-mode'.
-  ;; (context-menu-mode 1)
-  ;; (add-hook 'context-menu-functions #'embark-context-menu 100)
 
   :config
 
