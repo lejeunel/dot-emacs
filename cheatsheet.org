@@ -26,12 +26,24 @@
 ~M-;~ -- ~comment-dwim~ comment or uncomment region
 ~M-(~ -- ~insert-parentheses~ enclose region whithin parentheses
 
+*** Others
+
 ~C-x C-x~ -- ~exchange-point-and-mark~ set mark to current point and select
 from previous mark
 
 ** Drag-Stuff (external package)
 
 Select a region and ~M-<arrow-key>~ to move region around.
+
+** Search and Replace with isearch and occur
+
+~C-s~ run isearch to search for pattern
+~C-r~ run isearch in "reverse" (upwards)
+
+While still inside isearch, ~M-s o~ opens an occur
+buffer that lists all results.
+In an occur buffer, hit ~e~ to enter edit mode, and
+~C-c C-c~ to apply changes.
 
 ** Indent
 
@@ -49,6 +61,14 @@ detected paragraphs/sections/function of current buffer.
   item at point (class, function, variable, ...)
 - ~M-,~ (~xref-go-back~) jumps back to location before invocation
 
+** RipGrep
+
+Search current project for a pattern with
+~consult-ripgrep~ (~C-x p s~).
+
+To select a directory, or a list of directories,
+use the prefix command: ~C-u C-x p s~.
+
 ** search, jump-to, and replace with ~consult-ripgrep~
 
 Run ~consult-ripgrep~ to search the current project, or
@@ -63,10 +83,6 @@ The buffer can be made editable with
 
 Once changes have been made, ~C-x C-s~
 applies changes to the files.
-
-*** Specify custom path
-
-Use the prefix key to specify the search path: ~C-u C-x p s~.
 
 ** Bookmark
 
@@ -88,6 +104,11 @@ and run ~copy-rectangle-as-kill~ (~C-x r y~), to copy the region in the kill-rin
 
 Place point at top-right corner where you want to paste it and run
 ~yank-rectangle~ (~C-x r y~).
+
+** Creating a new empty line
+
+To create a blank new line above point, do
+~open-line~ (~C-o~).
 
 ** Repeating commands
 
@@ -114,9 +135,12 @@ Place point at top-right corner where you want to paste it and run
 ~C-k~ kills from point until end of line (~kill-line~)
 ~C-u 0 C-k~ kills from point until beginning of line
 ~C-S-<backspace>~ kills the whole line where point is placed (~kill-whole-line~)
+~C-x C-o~ -- ~delete-blank-lines~ removes all empty lines below point.
+
+*** Other
+~M-z~ -- ~zap-to-char~ kill up to and including character
 
 *** Register
-
 ~C-x r s r~ copy region into register ~r~
 ~C-x r i r~ insert text in register ~r~
 
@@ -182,6 +206,11 @@ here, /error/ means a line highlighted in the output buffer.
 
 Aside from regular undo called with ~C-/~, one may select a region and
 the undo operations will only apply to that region.
+
+** Window Manipulation
+
+To turn a horizontal split into vertical split or vice verso, do
+~window-layout-transpose~ (~C-x w t~).
 
 ** Registers
 
