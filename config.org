@@ -230,6 +230,13 @@ The DWIM behaviour of this command is as follows:
 
 #+end_src
 
+* JSON mode
+
+#+begin_src emacs-lisp
+  (use-package json-mode
+    :ensure t)
+#+end_src
+
 * Rainbow-mode
 
 Displays parentheses groups with distinct colors.
@@ -835,6 +842,15 @@ Eglot bridges external language servers with emacs.
   :bind
   (:map eglot-mode-map
         ("C-c r" . eglot-rename)))
+#+end_src
+
+** Eldoc
+
+#+begin_src emacs-lisp
+  (setq eldoc-idle-delay 1.0)
+  (setq eldoc-echo-area-use-multiline-p nil)
+  (setq eldoc-echo-area-prefer-doc-buffer t)
+
 #+end_src
 
 ** Trusted-content
