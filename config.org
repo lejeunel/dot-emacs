@@ -14,9 +14,9 @@
 ** Main org directory
 
 #+begin_src emacs-lisp
-  (defcustom ll/org-root-dir (expand-file-name "~/Dropbox/org/")
+  (defcustom ll/org-root-dir (expand-file-name "~/Dropbox/org")
     "Path to root org directory"
-    :type 'file)
+    :type 'directory)
 #+end_src
 
 ** Bibliography directories and files
@@ -89,8 +89,8 @@ Do not generate:
 
 #+begin_src emacs-lisp
   (set-face-attribute 'default nil
-                      :family "Aporetic Sans Mono"
-                      :height 190)
+                      :family "Iosevka Sans Mono"
+                      :height 170)
 #+end_src
 
 Disable cursor blinking.
@@ -167,7 +167,6 @@ Install it.
   (elpaca `(,@elpaca-order))
 
   (elpaca elpaca-use-package
-    ;; Enable use-package :ensure support for Elpaca.
     (elpaca-use-package-mode))
 #+end_src
 
@@ -214,7 +213,7 @@ The DWIM behaviour of this command is as follows:
 * Open file with
 
 #+begin_src emacs-lisp
-(defun ll/open-withq (arg)
+(defun ll/open-with (arg)
   "Open visited file in default external program.
 
         With a prefix ARG always prompt for command to use."
@@ -244,7 +243,8 @@ Displays parentheses groups with distinct colors.
 * Dired
 
 #+begin_src emacs-lisp
-(setq dired-dwim-target t)
+  (setq dired-dwim-target t)
+  (setq dired-listing-switches "-alh")
 #+end_src
 
 * Basic UI tweaks
@@ -374,8 +374,7 @@ that Consult commands, like previews, are available when using Embark.
 #+begin_src emacs-lisp
 (use-package embark-consult
   :ensure t
-  :hook
-  (embark-collect-mode . consult-preview-at-point-mode)) ;; Enable preview in Embark collect mode.
+  :after (embark consult))
 #+end_src
 
 * Magit
@@ -383,6 +382,22 @@ that Consult commands, like previews, are available when using Embark.
   (use-package magit
     :ensure t
     :defer t)
+#+end_src
+
+** Git-timemachine
+
+Allows to fetch and preview previous committed versions of a file.
+
+#+begin_src emacs-lisp
+  (use-package git-timemachine
+    :ensure t)
+#+end_src
+
+** Bindings
+
+#+begin_src emacs-lisp
+  (global-set-key (kbd "C-x g g") #'magit-status)
+  (global-set-key (kbd "C-x g t") #'git-timemachine)
 #+end_src
 
 * Minibuffer searching, narrowing and documentation
@@ -479,25 +494,37 @@ navigating buffers, files, and xrefs with ease.
 
 #+begin_src emacs-lisp
   (use-package consult
-        :ensure t
-        :defer t
-        :bind
-        (("C-x c e" . consult-flymake)
-         ("C-x c m" . consult-mark)
-         ("C-x b" . consult-buffer))
-        :init
-        ;; Enhance register preview with thin lines and no mode line.
-        (advice-add #'register-preview :override #'consult-register-window)
+    :ensure t
+    :defer t
+    :bind
+    (("C-x c e" . consult-flymake)
+     ("C-x c m" . consult-mark)
+     ("C-x b" . consult-buffer)
+     ("C-b" . consult-buffer)
+     ;; consult-line picks up the current isearch string and exits isearch
+     :map isearch-mode-map
+     ("C-l" . consult-line))
+    :init
+    ;; Enhance register preview with thin lines and no mode line.
+    (advice-add #'register-preview :override #'consult-register-window)
 
-        ;; Use Consult for xref locations with a preview feature.
-        (setq xref-show-xrefs-function #'consult-xref
-              xref-show-definitions-function #'consult-xref))
+    ;; Use Consult for xref locations with a preview feature.
+    (setq xref-show-xrefs-function #'consult-xref
+          xref-show-definitions-function #'consult-xref))
 #+end_src
 
 ** consult-imenu
 
 #+begin_src emacs-lisp
 (global-set-key (kbd "M-g i") #'consult-imenu)
+#+end_src
+
+* Buffers
+
+#+begin_src emacs-lisp
+  (global-set-key (kbd "<C-prior>") 'previous-buffer)
+  (global-set-key (kbd "<C-next>") 'next-buffer)
+    (global-set-key (kbd "C-f") 'find-file)
 #+end_src
 
 * Flymake
@@ -524,7 +551,23 @@ Enables syntax and error checking.
         )
 #+end_src
 
+* Avy
+
+Jump to visible text using a char-based decision tree.
+
+#+begin_src emacs-lisp
+  (use-package avy
+    :ensure t
+    :config
+    (global-set-key (kbd "C-:") 'avy-goto-char-2)
+    :bind
+    ;; jump to isearch-ed term
+    (:map isearch-mode-map ("C-j" . avy-isearch))
+    )
+#+end_src
+
 * Treesitter
+
 Treesit-auto simplifies the use of Tree-sitter grammars in Emacs,
 providing automatic installation and mode association for various
 programming languages. This enhances syntax highlighting and
@@ -561,7 +604,7 @@ programming languages.
    (define-key global-map (kbd "C-x c c") #'org-capture)
    (setq org-capture-templates
          `(("m" "Meeting" entry
-            (file+headline ,(concat ll/org-root-dir "meetings.org") "Meetings")
+            (file+headline ,(concat (file-name-as-directory ll/org-root-dir) "meetings.org") "Meetings")
             "* %^U %^{Participants}\n%?"
             :empty-lines 1))))
 #+end_src
@@ -575,6 +618,7 @@ Integration for RipGrep to search text.
     :ensure t
     :config
     (rg-enable-default-bindings))
+  
   (define-key global-map (kbd "C-x p s") #'consult-ripgrep)
 #+end_src
 
@@ -582,6 +626,7 @@ Integration for RipGrep to search text.
 (use-package wgrep
   :ensure t)
 #+end_src
+
 * Appearance
 
 ** Line numbers
@@ -1016,11 +1061,14 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
     :ensure t
     :bind (("C-x m" . ghostel)
            :map ghostel-semi-char-mode-map
-           ("C-s"  . consult-line)
            ("M-<backspace>" . ghostel-backward-kill-word)
            :map project-prefix-map
            ("m" . ghostel-project)
            ("M" . ghostel-project-list-buffers))
+    :custom
+    (ghostel-keymap-exceptions
+     '("C-c" "C-x" "C-u" "C-h" "M-x" "M-:" "C-\\" "C-<prior>" "C-<next>"
+       "S-<left>" "S-<right>" "S-<up>" "S-<down>" "C-b" "C-f"))
     :config
     (defun ghostel-send-C-k-and-kill ()
       "Send `C-k' to ghostel.
