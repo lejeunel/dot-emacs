@@ -595,6 +595,20 @@ programming languages.
           org-support-shift-select t))
 #+end_src
 
+** Auto-tangle this config on save
+
+#+begin_src emacs-lisp
+  (defun ll/tangle-config-on-save ()
+    "Tangle `config.org' after saving it."
+    (when (and buffer-file-name
+               (file-equal-p buffer-file-name
+                             (expand-file-name "config.org" user-emacs-directory)))
+      (org-babel-tangle)))
+
+  (add-hook 'org-mode-hook
+            (lambda () (add-hook 'after-save-hook #'ll/tangle-config-on-save nil t)))
+#+end_src
+
 * Org-capture
 
 #+begin_src emacs-lisp
@@ -849,7 +863,7 @@ By default, emacs writes a backup prior to saving with naming ~my-file.ext~~ in 
 same directory. I prefer to store these in a separate dedicated directory.
 
 #+begin_src emacs-lisp
-  (setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
+  (setq backup-directory-alist '(("." . "~/config/emacs/backups")))
 #+end_src
 
 * Expand-region
@@ -932,11 +946,6 @@ Treat CamelCase as two words when using word motions.
 *** Eglot
 #+begin_src emacs-lisp
   (add-hook 'python-ts-mode-hook #'eglot-ensure)
-#+end_src
-
-*** Show whitespaces
-#+begin_src emacs-lisp
-;  (add-hook 'python-ts-mode-hook #'whitespace-mode)
 #+end_src
 
 *** Subword navigation
@@ -1064,6 +1073,7 @@ compilers, and test runners, will be looked up in the correct $PATH, and will be
            ("M-<backspace>" . ghostel-backward-kill-word)
            :map project-prefix-map
            ("m" . ghostel-project)
+  	 ("n" . ghostel-project-new)
            ("M" . ghostel-project-list-buffers))
     :custom
     (ghostel-keymap-exceptions
